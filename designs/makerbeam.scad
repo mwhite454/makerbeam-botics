@@ -1,13 +1,13 @@
-// MakerBeam base profile and common dimensions
-// MakerBeam: 10x10mm aluminium extrusion with T-slot groove
+// MakerBeamXL base profile and common dimensions
+// MakerBeamXL: 15x15mm aluminium extrusion with T-slot groove
 // Hardware: M3 bolts and T-slot nuts
 
 // --- Core dimensions ---
-MB_SIZE        = 10;   // Extrusion cross-section (mm)
-MB_SLOT_WIDTH  = 6.2;  // T-slot opening width (mm)
-MB_SLOT_DEPTH  = 4.5;  // T-slot groove depth (mm)
+MB_SIZE        = 15;   // Extrusion cross-section (mm)
+MB_SLOT_WIDTH  = 8.0;  // T-slot opening width (mm)
+MB_SLOT_DEPTH  = 6.0;  // T-slot groove depth (mm)
 MB_BOLT_DIAM   = 3.2;  // M3 clearance hole diameter (mm)
-MB_NUT_WIDTH   = 5.5;  // T-nut width across flats (mm)
+MB_NUT_WIDTH   = 6.5;  // T-nut width across flats (mm)
 MB_NUT_HEIGHT  = 2.4;  // T-nut height (mm)
 
 // --- Print tolerances ---
@@ -16,7 +16,7 @@ SLOT_TOL       = 0.3;  // Extra tolerance for T-slot fits (mm)
 
 // --- Utility modules ---
 
-// A single MakerBeam extrusion segment of given length along the Z axis.
+// A single MakerBeamXL extrusion segment of given length along the Z axis.
 module makerbeam(length, color_val = "silver") {
     color(color_val)
     linear_extrude(length)
@@ -40,10 +40,10 @@ module m3_hole(depth = 20) {
     cylinder(h = depth, d = MB_BOLT_DIAM, center = true, $fn = 20);
 }
 
-// A slot for a MakerBeam T-nut (laid flat, bolt axis along Z).
+// A slot for a MakerBeamXL T-nut (laid flat, bolt axis along Z).
 module t_nut_slot(depth = MB_SLOT_DEPTH + SLOT_TOL) {
     cube([MB_NUT_WIDTH + SLOT_TOL, MB_NUT_HEIGHT + SLOT_TOL, depth], center = true);
 }
 
-// Preview showing a short section of MakerBeam.
+// Preview showing a short section of MakerBeamXL.
 makerbeam(40);

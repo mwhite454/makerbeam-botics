@@ -1,6 +1,6 @@
-// Servo mount for MakerBeam 10x10mm extrusion
+// Servo mount for MakerBeamXL 15x15mm extrusion
 // Compatible with standard SG90 / MG90S micro-servos
-// Bolt pattern: two M3 holes spanning 10mm centres (matches one MakerBeam face)
+// Bolt pattern: two M3 holes spanning 15mm centres (matches one MakerBeamXL face)
 
 use <makerbeam.scad>
 
@@ -19,7 +19,7 @@ SERVO_OUTPUT_X = -11.4; // output shaft X offset from body centre
 // --- Mount parameters ---
 WALL         =  3.0;    // wall thickness
 MB_BOLT_D    =  3.2;    // M3 clearance hole diameter
-MB_BOLT_SPAN = 10.0;    // bolt hole centres (one MakerBeam face width)
+MB_BOLT_SPAN = 15.0;    // bolt hole centres (one MakerBeamXL face width)
 FILLET       =  1.5;    // edge fillet radius (for print quality)
 TOL          =  0.3;    // servo body pocket tolerance
 
@@ -50,7 +50,7 @@ module servo_pocket() {
 }
 
 module makerbeam_bolt_holes() {
-    // Two M3 holes to clamp onto a MakerBeam face
+    // Two M3 holes to clamp onto a MakerBeamXL face
     for (dx = [-MB_BOLT_SPAN / 2, MB_BOLT_SPAN / 2])
         translate([dx, 0, 0])
         rotate([90, 0, 0])
@@ -63,12 +63,12 @@ module servo_mount() {
         cube([BRACKET_W, BRACKET_D, BRACKET_H], center = false,
              $fn = $fn);
 
-        // MakerBeam channel
+        // MakerBeamXL channel
         translate([0, WALL, MB_SIZE / 2])
         rotate([0, 90, 0])
         cube([MB_SIZE + TOL * 2, MB_SIZE + TOL * 2, BRACKET_W + 2], center = true);
 
-        // M3 clamping bolt holes through the MakerBeam channel
+        // M3 clamping bolt holes through the MakerBeamXL channel
         translate([BRACKET_W / 2, WALL + (MB_SIZE + TOL * 2) / 2, MB_SIZE / 2])
         makerbeam_bolt_holes();
 

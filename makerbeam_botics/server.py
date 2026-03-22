@@ -1,4 +1,4 @@
-"""MCP server exposing OpenSCAD tools to Claude for designing MakerBeam parts."""
+"""MCP server exposing OpenSCAD tools to Claude for designing MakerBeamXL parts."""
 
 import os
 import sys
@@ -16,11 +16,11 @@ from makerbeam_botics.openscad_tools import (
 mcp = FastMCP(
     "makerbeam-botics",
     instructions=(
-        "You are a 3D design assistant for MakerBeam aluminium extrusion projects. "
+        "You are a 3D design assistant for MakerBeamXL aluminium extrusion projects. "
         "Use the provided tools to create, read, and render OpenSCAD designs for "
-        "MakerBeam attachments such as servo mounts, motor mounts, brackets, and "
+        "MakerBeamXL attachments such as servo mounts, motor mounts, brackets, and "
         "custom connectors. "
-        "MakerBeam uses 10×10 mm aluminium extrusion with M3 hardware. "
+        "MakerBeamXL uses 15×15 mm aluminium extrusion with M3 hardware. "
         "Always include appropriate tolerances and fillet/chamfer edges for printability."
     ),
 )

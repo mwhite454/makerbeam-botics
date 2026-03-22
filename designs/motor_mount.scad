@@ -1,6 +1,6 @@
-// Motor mount for MakerBeam 10x10mm extrusion
+// Motor mount for MakerBeamXL 15x15mm extrusion
 // Designed for standard N20 micro gear motors (12mm body diameter)
-// Bolt pattern: two M3 holes on one MakerBeam face
+// Bolt pattern: two M3 holes on one MakerBeamXL face
 
 use <makerbeam.scad>
 
@@ -12,7 +12,7 @@ SHAFT_DIAM    =  3.0;  // output shaft diameter (mm)
 // --- Mount parameters ---
 WALL         = 3.0;   // wall thickness
 MB_BOLT_D    = 3.2;   // M3 clearance hole diameter
-MB_BOLT_SPAN = 10.0;  // bolt centres (one MakerBeam face)
+MB_BOLT_SPAN = 15.0;  // bolt centres (one MakerBeamXL face)
 CLAMP_BOLT_D = 3.2;   // M3 clamp bolt diameter
 TOL          = 0.3;   // motor body tolerance
 
@@ -60,11 +60,11 @@ module motor_mount() {
 
     difference() {
         union() {
-            // Base plate bridging MakerBeam channel and clamp ring
+            // Base plate bridging MakerBeamXL channel and clamp ring
             cube([BRACKET_W, BRACKET_D, BRACKET_H], center = false);
         }
 
-        // MakerBeam channel
+        // MakerBeamXL channel
         translate([BRACKET_W / 2, 0, MB_SIZE / 2])
         makerbeam_channel_and_bolts(BRACKET_W);
 
