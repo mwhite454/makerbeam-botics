@@ -1,0 +1,40 @@
+{
+  "profiles": {
+    "10": {
+      "name": "MakerBeam 10x10mm",
+      "profile_size": 10,
+      "width": 10,
+      "height": 10,
+      "slot_width": 6.0,
+      "slot_depth": 1.8,
+      "slot_inner_width": 7.5,
+      "slot_inner_depth": 3.0,
+      "bolt_diameter": 3.0,
+      "bolt_clearance_diameter": 3.2,
+      "t_nut_width": 5.9,
+      "t_nut_thickness": 1.8,
+      "t_nut_length": 6.0,
+      "standard_lengths_mm": [60, 100, 150, 200, 300, 400, 500, 600],
+      "bolt_spacing_mm": 10,
+      "notes": "MakerBeam 10x10mm aluminum T-slot extrusion. M3 bolts. 4 slots (one per face)."
+    },
+    "15": {
+      "name": "MakerBeam XL 15x15mm",
+      "profile_size": 15,
+      "width": 15,
+      "height": 15,
+      "slot_width": 6.0,
+      "slot_depth": 2.5,
+      "slot_inner_width": 10.0,
+      "slot_inner_depth": 4.5,
+      "bolt_diameter": 3.0,
+      "bolt_clearance_diameter": 3.2,
+      "t_nut_width": 5.9,
+      "t_nut_thickness": 2.4,
+      "t_nut_length": 7.5,
+      "standard_lengths_mm": [60, 100, 150, 200, 300, 400, 500, 600],
+      "bolt_spacing_mm": 15,
+      "notes": "MakerBeam XL 15x15mm aluminum T-slot extrusion. M3 bolts. 4 slots (one per face)."
+    }
+  }
+}
