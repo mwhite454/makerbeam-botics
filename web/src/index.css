@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Override React Flow defaults to match dark theme */
+.react-flow__pane {
+  cursor: default;
+}
+
+.react-flow__node {
+  cursor: default;
+}
+
+/* Smooth edge animations */
+.react-flow__edge-path {
+  transition: stroke 0.15s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* Prevent text selection during drag */
+.react-flow__renderer {
+  user-select: none;
+}
