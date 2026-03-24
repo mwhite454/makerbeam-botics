@@ -1,24 +1,55 @@
 import { useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store/editorStore'
-import { generateCode }   from '@/codegen'
+import { generateCode, generateModuleCode } from '@/codegen'
 
 const DEBOUNCE_MS = 150
 
 export function useCodegen() {
   const nodes           = useEditorStore((s) => s.nodes)
   const edges           = useEditorStore((s) => s.edges)
+  const tabs            = useEditorStore((s) => s.tabs)
+  const activeTabId     = useEditorStore((s) => s.activeTabId)
   const setGeneratedCode = useEditorStore((s) => s.setGeneratedCode)
   const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      const code = generateCode(nodes, edges)
-      setGeneratedCode(code)
+      let fullCode = ''
+
+      // First, emit all module tab definitions
+      for (const tab of tabs) {
+        if (tab.isModule && tab.id !== activeTabId) {
+          // Use the tab's stored nodes/edges
+          const moduleCode = generateModuleCode(tab.moduleName, tab.nodes, tab.edges)
+          if (moduleCode.trim()) {
+            fullCode += moduleCode + '\n'
+          }
+        } else if (tab.isModule && tab.id === activeTabId) {
+          // Active module tab — use current nodes/edges from store
+          const moduleCode = generateModuleCode(tab.moduleName, nodes, edges)
+          if (moduleCode.trim()) {
+            fullCode += moduleCode + '\n'
+          }
+        }
+      }
+
+      // Then emit the active tab's top-level code (or the main tab)
+      const activeTab = tabs.find((t) => t.id === activeTabId)
+      if (activeTab && !activeTab.isModule) {
+        // For non-module tabs, also prepend any module definitions
+        // Then emit the main code
+        fullCode += generateCode(nodes, edges)
+      } else if (activeTab && activeTab.isModule) {
+        // Show just the module code for the active module tab
+        // (already added above)
+      }
+
+      setGeneratedCode(fullCode)
     }, DEBOUNCE_MS)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [nodes, edges, setGeneratedCode])
+  }, [nodes, edges, tabs, activeTabId, setGeneratedCode])
 }

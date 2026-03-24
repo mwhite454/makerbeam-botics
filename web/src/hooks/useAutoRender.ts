@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useEditorStore } from '@/store/editorStore'
-import { useOpenSCAD }    from '@/wasm/useOpenSCAD'
+import { useOpenSCAD, type RenderError } from '@/wasm/useOpenSCAD'
 
 const DEBOUNCE_MS = 900
 
@@ -29,7 +29,9 @@ export function useAutoRender() {
         setRenderResultPNG(new Uint8Array(data))
       }
     } catch (err) {
-      setRenderError(err instanceof Error ? err.message : String(err))
+      // err is a RenderError { message, logs } from the worker
+      const renderErr = err as RenderError
+      setRenderError(renderErr.message || String(err), renderErr.logs || '')
     }
   }, [render, wasmStatus, setRenderStatus, setRenderResultSTL, setRenderResultPNG, setRenderError])
 
@@ -45,6 +47,5 @@ export function useAutoRender() {
     }
   }, [generatedCode, autoRender, previewMode, doRender])
 
-  // Return manual trigger
   return { doRender: () => doRender(generatedCode, previewMode) }
 }

@@ -1,10 +1,10 @@
 /// <reference lib="webworker" />
 
-// Web Worker that manages the OpenSCAD WASM instance.
-// Stays resident between renders to avoid expensive re-initialisation.
-// Uses the openscad-wasm npm package (createOpenSCAD / OpenSCADInstance API).
+// Web Worker for OpenSCAD WASM rendering.
+// Uses the low-level API directly to capture stderr (compile errors).
 
 import { createOpenSCAD, type OpenSCADInstance } from 'openscad-wasm'
+import type { OpenSCAD } from 'openscad-wasm'
 
 export type WorkerRequest =
   | { type: 'render'; id: string; code: string; format: 'stl' | 'png' }
@@ -12,8 +12,8 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'ready' }
-  | { type: 'result';  id: string; format: 'stl' | 'png'; data: ArrayBuffer }
-  | { type: 'error';   id: string; message: string }
+  | { type: 'result'; id: string; format: 'stl' | 'png'; data: ArrayBuffer }
+  | { type: 'error';  id: string; message: string; logs: string }
   | { type: 'pong' }
 
 let instance: OpenSCADInstance | null = null
@@ -29,10 +29,17 @@ async function initOpenSCAD() {
     self.postMessage(msg)
   } catch (err) {
     console.error('[openscad-worker] Init failed:', err)
+    // Post an informative message back
+    const msg: WorkerResponse = {
+      type: 'error',
+      id: '__init__',
+      message: `OpenSCAD WASM failed to initialize: ${err instanceof Error ? err.message : String(err)}`,
+      logs: '',
+    }
+    self.postMessage(msg)
   } finally {
     initialising = false
   }
-  // Drain pending requests
   while (pendingQueue.length > 0) {
     handleRequest(pendingQueue.shift()!)
   }
@@ -49,54 +56,108 @@ function handleRequest(req: WorkerRequest) {
   }
 }
 
-async function runRender(id: string, code: string, format: 'stl' | 'png') {
+function runRender(id: string, code: string, format: 'stl' | 'png') {
   if (!instance) return
 
-  const errors: string[] = []
+  // Use low-level API to capture stdout/stderr
+  const raw: OpenSCAD = instance.getInstance()
+  const stdout: string[] = []
+  const stderr: string[] = []
+
+  // Capture output
+  raw.print = (text: string) => stdout.push(text)
+  raw.printErr = (text: string) => stderr.push(text)
+
+  const inputPath = '/input.scad'
+  const outputExt = format === 'stl' ? '.stl' : '.png'
+  const outputPath = `/output${outputExt}`
 
   try {
-    if (format === 'stl') {
-      // High-level renderToStl API
-      const stlString = await instance.renderToStl(code)
-      if (!stlString || stlString.trim() === '') {
-        throw new Error('Render produced empty output. Check the SCAD code for errors.')
-      }
-      // Convert STL string to ArrayBuffer
-      const encoder = new TextEncoder()
-      const bytes = encoder.encode(stlString)
-      const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-      const msg: WorkerResponse = { type: 'result', id, format, data: buffer }
-      self.postMessage(msg, [buffer])
+    // Write the source file
+    raw.FS.writeFile(inputPath, code)
 
-    } else {
-      // PNG: use low-level callMain
-      const raw = instance.getInstance()
-      raw.printErr = (text) => errors.push(text)
-
-      const inputPath  = '/input.scad'
-      const outputPath = '/output.png'
-      raw.FS.writeFile(inputPath, code)
-      raw.callMain([inputPath, '-o', outputPath, '--render', '--imgsize=800,600'])
-
-      let data: Uint8Array
-      try {
-        data = raw.FS.readFile(outputPath, { encoding: 'binary' }) as Uint8Array
-      } catch {
-        throw new Error(errors.length > 0 ? errors.join('\n') : 'PNG render failed — no output file')
-      }
-
-      try { raw.FS.unlink(inputPath)  } catch { /* ignore */ }
-      try { raw.FS.unlink(outputPath) } catch { /* ignore */ }
-
-      const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
-      const msg: WorkerResponse = { type: 'result', id, format, data: buffer }
-      self.postMessage(msg, [buffer])
+    // Build args
+    const args: string[] = [inputPath, '-o', outputPath]
+    if (format === 'png') {
+      args.push('--render', '--imgsize=800,600')
     }
+
+    // Run OpenSCAD
+    const exitCode = raw.callMain(args)
+
+    // Assemble logs
+    const allLogs = [...stdout, ...stderr].join('\n')
+
+    // Check for errors
+    const hasError = stderr.some(line =>
+      line.includes('ERROR:') || line.includes('FATAL:')
+    )
+
+    if (exitCode !== 0 || hasError) {
+      const errorLines = stderr.filter(l =>
+        l.includes('ERROR:') || l.includes('WARNING:') || l.includes('FATAL:') || l.includes('line ')
+      )
+      const summary = errorLines.length > 0
+        ? errorLines.join('\n')
+        : `OpenSCAD exited with code ${exitCode}`
+
+      const msg: WorkerResponse = { type: 'error', id, message: summary, logs: allLogs }
+      self.postMessage(msg)
+      cleanup(raw, inputPath, outputPath)
+      return
+    }
+
+    // Try to read the output file
+    let data: Uint8Array
+    try {
+      data = raw.FS.readFile(outputPath, { encoding: 'binary' }) as Uint8Array
+    } catch {
+      const msg: WorkerResponse = {
+        type: 'error',
+        id,
+        message: 'Render completed but produced no output file.',
+        logs: allLogs,
+      }
+      self.postMessage(msg)
+      cleanup(raw, inputPath, outputPath)
+      return
+    }
+
+    if (data.length === 0) {
+      const msg: WorkerResponse = {
+        type: 'error',
+        id,
+        message: 'Render produced an empty file. The geometry may be invalid (e.g. 2D shape without extrusion for STL).',
+        logs: allLogs,
+      }
+      self.postMessage(msg)
+      cleanup(raw, inputPath, outputPath)
+      return
+    }
+
+    cleanup(raw, inputPath, outputPath)
+
+    const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+    const msg: WorkerResponse = { type: 'result', id, format, data: buffer }
+    self.postMessage(msg, [buffer])
+
   } catch (err) {
+    const allLogs = [...stdout, ...stderr].join('\n')
     const message = err instanceof Error ? err.message : String(err)
-    const fullMsg = errors.length > 0 ? `${message}\n${errors.join('\n')}` : message
-    const msg: WorkerResponse = { type: 'error', id, message: fullMsg }
+    const msg: WorkerResponse = {
+      type: 'error',
+      id,
+      message: `Render crashed: ${message}`,
+      logs: allLogs,
+    }
     self.postMessage(msg)
+    cleanup(raw, inputPath, outputPath)
+  }
+}
+
+function cleanup(raw: OpenSCAD, ...paths: string[]) {
+  for (const p of paths) {
+    try { raw.FS.unlink(p) } catch { /* ignore */ }
   }
 }
 
@@ -110,5 +171,4 @@ self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
   }
 })
 
-// Kick off init when worker loads
 initOpenSCAD()

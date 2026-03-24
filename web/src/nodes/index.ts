@@ -26,20 +26,32 @@ import { RotateExtrudeNode } from './extrusions/RotateExtrudeNode'
 import { HullNode, MinkowskiNode } from './modifiers/HullMinkowskiNode'
 import { ColorNode }        from './modifiers/ColorNode'
 import { ProjectionNode }   from './modifiers/ProjectionNode'
+import { RenderNode }       from './modifiers/RenderNode'
+
+import { ForLoopNode }      from './control/ForLoopNode'
+import { IfCondNode }       from './control/IfCondNode'
+import { VarNode }          from './control/VarNode'
+import { EchoNode }         from './control/EchoNode'
+
+import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
+import { SurfaceNode }      from './import_nodes/SurfaceNode'
 
 import { MakerBeamNode }    from './makerbeam/MakerBeamNode'
 
 export const nodeTypes: NodeTypes = {
+  // 3D Primitives
   sphere:           SphereNode,
   cube:             CubeNode,
   cylinder:         CylinderNode,
   polyhedron:       PolyhedronNode,
 
+  // 2D Primitives
   circle:           CircleNode,
   square:           SquareNode,
   polygon:          PolygonNode,
   scadtext:         ScadTextNode,
 
+  // Transforms
   translate:        TranslateNode,
   rotate:           RotateNode,
   scale:            ScaleNode,
@@ -48,17 +60,32 @@ export const nodeTypes: NodeTypes = {
   multmatrix:       MultmatrixNode,
   offset:           OffsetNode,
 
+  // Booleans
   union:            UnionNode,
   difference:       DifferenceNode,
   intersection:     IntersectionNode,
 
+  // Extrusions
   linear_extrude:   LinearExtrudeNode,
   rotate_extrude:   RotateExtrudeNode,
 
+  // Modifiers
   hull:             HullNode,
   minkowski:        MinkowskiNode,
   color:            ColorNode,
   projection:       ProjectionNode,
+  render_node:      RenderNode,
 
+  // Control Flow
+  for_loop:         ForLoopNode,
+  if_cond:          IfCondNode,
+  var_node:         VarNode,
+  echo_node:        EchoNode,
+
+  // Import
+  import_stl:       ImportSTLNode,
+  surface_node:     SurfaceNode,
+
+  // MakerBeam
   makerbeam:        MakerBeamNode,
 }

@@ -1,10 +1,11 @@
 import { ReactFlowProvider } from '@xyflow/react'
-import { Toolbar }     from './components/toolbar/Toolbar'
-import { NodePalette } from './components/toolbar/NodePalette'
-import { EditorPanel } from './components/panels/EditorPanel'
+import { Toolbar }      from './components/toolbar/Toolbar'
+import { NodePalette }  from './components/toolbar/NodePalette'
+import { EditorPanel }  from './components/panels/EditorPanel'
 import { PreviewPanel } from './components/panels/PreviewPanel'
-import { CodePanel }   from './components/panels/CodePanel'
-import { useCodegen }  from './hooks/useCodegen'
+import { CodePanel }    from './components/panels/CodePanel'
+import { TabBar }       from './components/panels/TabBar'
+import { useCodegen }   from './hooks/useCodegen'
 import { useAutoRender } from './hooks/useAutoRender'
 
 function AppInner() {
@@ -21,8 +22,11 @@ function AppInner() {
         {/* Left palette */}
         <NodePalette />
 
-        {/* Canvas */}
-        <EditorPanel />
+        {/* Center: canvas + tab bar */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <EditorPanel />
+          <TabBar />
+        </div>
 
         {/* Right preview */}
         <PreviewPanel />

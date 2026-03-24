@@ -3,9 +3,14 @@ import type { WorkerRequest, WorkerResponse } from './openscadWorker.worker'
 
 export type WasmStatus = 'loading' | 'ready' | 'unavailable'
 
+export interface RenderError {
+  message: string
+  logs: string
+}
+
 interface PendingResolve {
   resolve: (data: ArrayBuffer) => void
-  reject:  (err: Error) => void
+  reject:  (err: RenderError) => void
 }
 
 // Singleton worker — shared across all hook instances
@@ -45,11 +50,8 @@ export function useOpenSCAD() {
     }
     workerRef.current = worker
 
-    // Register status listener
     const onStatus = (s: WasmStatus) => setWasmStatus(s)
     statusListeners.add(onStatus)
-
-    // Sync current status immediately
     setWasmStatus(sharedWorkerStatus)
 
     const onMessage = (event: MessageEvent<WorkerResponse>) => {
@@ -64,10 +66,16 @@ export function useOpenSCAD() {
           pending.resolve(msg.data)
         }
       } else if (msg.type === 'error') {
+        // Handle init errors
+        if (msg.id === '__init__') {
+          sharedWorkerStatus = 'unavailable'
+          statusListeners.forEach((fn) => fn('unavailable'))
+          return
+        }
         const pending = pendingMap.current.get(msg.id)
         if (pending) {
           pendingMap.current.delete(msg.id)
-          pending.reject(new Error(msg.message))
+          pending.reject({ message: msg.message, logs: msg.logs })
         }
       }
     }
@@ -87,7 +95,7 @@ export function useOpenSCAD() {
         try {
           worker = getOrCreateWorker()
         } catch {
-          reject(new Error('OpenSCAD WASM worker unavailable'))
+          reject({ message: 'OpenSCAD WASM worker unavailable', logs: '' })
           return
         }
 
@@ -101,7 +109,7 @@ export function useOpenSCAD() {
         setTimeout(() => {
           if (pendingMap.current.has(id)) {
             pendingMap.current.delete(id)
-            reject(new Error('Render timed out after 120s'))
+            reject({ message: 'Render timed out after 120s', logs: '' })
           }
         }, 120_000)
       })

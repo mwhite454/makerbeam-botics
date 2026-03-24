@@ -8,6 +8,8 @@ const CATEGORY_ORDER: NodeCategory[] = [
   'boolean',
   'extrusion',
   'modifier',
+  'control',
+  'import',
   'makerbeam',
 ]
 

@@ -51,6 +51,18 @@ export function EditorPanel() {
     [addNode]
   )
 
+  // Keyboard handler for node/edge deletion
+  const onKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Don't delete if an input is focused
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return
+      }
+      // ReactFlow handles this via onNodesChange/onEdgesChange with remove changes
+    }
+  }, [])
+
   return (
     <div className="flex-1 relative bg-gray-950">
       <ReactFlow
@@ -63,14 +75,17 @@ export function EditorPanel() {
         onInit={(instance) => { rfInstance.current = instance }}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onKeyDown={onKeyDown}
         fitView
-        deleteKeyCode="Delete"
+        deleteKeyCode={['Delete', 'Backspace']}
         multiSelectionKeyCode="Shift"
+        selectionKeyCode="Shift"
         className="bg-gray-950"
         defaultEdgeOptions={{
           style: { stroke: '#60a5fa', strokeWidth: 2 },
           animated: false,
         }}
+        proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -93,6 +108,9 @@ export function EditorPanel() {
               linear_extrude: '#9333ea', rotate_extrude: '#9333ea',
               hull: '#16a34a', minkowski: '#16a34a', color: '#16a34a', projection: '#16a34a',
               makerbeam: '#eab308',
+              for_loop: '#f97316', if_cond: '#f97316', render_node: '#16a34a',
+              import_stl: '#6b7280', surface_node: '#6b7280',
+              echo_node: '#6b7280', var_node: '#6b7280',
             }
             return colors[node.type ?? ''] ?? '#6b7280'
           }}
@@ -106,7 +124,8 @@ export function EditorPanel() {
           <div className="text-center text-gray-600">
             <div className="text-4xl mb-3">⬡</div>
             <p className="text-sm font-medium text-gray-500">Drag nodes from the palette</p>
-            <p className="text-xs text-gray-600 mt-1">or connect existing nodes to build geometry</p>
+            <p className="text-xs text-gray-600 mt-1">Connect nodes to build OpenSCAD geometry</p>
+            <p className="text-xs text-gray-600 mt-1">Select nodes and press Delete to remove them</p>
           </div>
         </div>
       )}
