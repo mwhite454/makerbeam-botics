@@ -29,8 +29,8 @@ function WasmIndicator({ status }: { status: WasmStatus }) {
 export function Toolbar({ onRender }: ToolbarProps) {
   const { wasmStatus } = useOpenSCAD()
   const {
-    renderStatus, previewMode, autoRender, codePanelOpen,
-    setPreviewMode, setAutoRender, toggleCodePanel,
+    renderStatus, previewMode, autoRender, autoColorPreview, codePanelOpen,
+    setPreviewMode, setAutoRender, setAutoColorPreview, toggleCodePanel,
     exportProject, importProject,
   } = useEditorStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -111,6 +111,16 @@ export function Toolbar({ onRender }: ToolbarProps) {
           onChange={(e) => setAutoRender(e.target.checked)}
         />
         Auto-render
+      </label>
+
+      <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer">
+        <input
+          type="checkbox"
+          className="accent-blue-500"
+          checked={autoColorPreview}
+          onChange={(e) => setAutoColorPreview(e.target.checked)}
+        />
+        Color preview
       </label>
 
       {/* Manual render button */}

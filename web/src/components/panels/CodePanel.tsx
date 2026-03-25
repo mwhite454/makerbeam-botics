@@ -2,10 +2,8 @@ import { useEditorStore } from '@/store/editorStore'
 import { useState } from 'react'
 
 export function CodePanel() {
-  const { generatedCode, codePanelOpen } = useEditorStore()
+  const generatedCode = useEditorStore((s) => s.generatedCode)
   const [copied, setCopied] = useState(false)
-
-  if (!codePanelOpen) return null
 
   const copy = () => {
     navigator.clipboard.writeText(generatedCode).then(() => {
@@ -15,9 +13,9 @@ export function CodePanel() {
   }
 
   return (
-    <div className="h-48 bg-gray-950 border-t border-white/10 flex flex-col shrink-0">
+    <div className="h-full bg-gray-950 border-t border-white/10 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-1.5 border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-white/5 shrink-0">
         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Generated OpenSCAD</span>
         <button
           className="text-[10px] px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"

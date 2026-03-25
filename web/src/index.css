@@ -16,6 +16,16 @@
   transition: stroke 0.15s;
 }
 
+/* Edge hover and selection styles */
+.react-flow__edge.selectable:hover .react-flow__edge-path {
+  stroke: #93c5fd;
+  stroke-width: 3;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #f87171;
+  stroke-width: 3;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 4px;
@@ -35,4 +45,66 @@
 /* Prevent text selection during drag */
 .react-flow__renderer {
   user-select: none;
+}
+
+/* ─── Resizable panel separators ──────────────────────────────────────────── */
+[data-separator].separator-h,
+[data-separator].separator-v {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+}
+
+/* Horizontal separator (between left/right panels) */
+[data-separator].separator-h {
+  width: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-separator].separator-h:hover,
+[data-separator].separator-h:active {
+  background: rgba(59, 130, 246, 0.3);
+}
+[data-separator].separator-h::after {
+  content: '';
+  width: 2px;
+  height: 24px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background-color 0.15s;
+}
+[data-separator].separator-h:hover::after,
+[data-separator].separator-h:active::after {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+/* Vertical separator (between top/bottom panels) */
+[data-separator].separator-v {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-separator].separator-v:hover,
+[data-separator].separator-v:active {
+  background: rgba(59, 130, 246, 0.3);
+}
+[data-separator].separator-v::after {
+  content: '';
+  height: 2px;
+  width: 24px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background-color 0.15s;
+}
+[data-separator].separator-v:hover::after,
+[data-separator].separator-v:active::after {
+  background: rgba(59, 130, 246, 0.7);
+}
+
+/* Collapsed panel placeholder */
+.panel-collapsed-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.1em;
 }

@@ -74,9 +74,12 @@ interface EditorState {
   codePanelOpen: boolean
   previewMode: PreviewMode
   autoRender: boolean
+  autoColorPreview: boolean
   toggleCodePanel: () => void
+  setCodePanelOpen: (open: boolean) => void
   setPreviewMode: (m: PreviewMode) => void
   setAutoRender: (v: boolean) => void
+  setAutoColorPreview: (v: boolean) => void
 
   // ── Save/load ───────────────────────────────────────────────────────────────
   exportProject: () => string
@@ -217,12 +220,15 @@ export const useEditorStore = create<EditorState>()(
 
       // ── UI state ────────────────────────────────────────────────────────────
       codePanelOpen: true,
-      previewMode: 'stl',
+      previewMode: 'png',
       autoRender: true,
+      autoColorPreview: true,
 
       toggleCodePanel: () => set((state) => { state.codePanelOpen = !state.codePanelOpen }),
+      setCodePanelOpen: (open) => set((state) => { state.codePanelOpen = open }),
       setPreviewMode: (m) => set((state) => { state.previewMode = m }),
       setAutoRender: (v) => set((state) => { state.autoRender = v }),
+      setAutoColorPreview: (v) => set((state) => { state.autoColorPreview = v }),
 
       // ── Save / load ─────────────────────────────────────────────────────────
       exportProject: () => {

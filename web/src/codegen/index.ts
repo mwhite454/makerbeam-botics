@@ -45,6 +45,10 @@ function num(v: unknown): number {
   return typeof v === 'number' ? v : parseFloat(String(v)) || 0
 }
 
+function escapeString(v: unknown): string {
+  return String(v ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+}
+
 // ─── Recursive code emitter ───────────────────────────────────────────────────
 
 function emitNode(
@@ -79,6 +83,10 @@ function emitNode(
     return emitNode(child.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
   }
 
+  function getChildRef(index: number): ChildRef | undefined {
+    return children.find((c) => c.handleIndex === index)
+  }
+
   function hasChild(index: number): boolean {
     return children.some((c) => c.handleIndex === index)
   }
@@ -90,6 +98,30 @@ function emitNode(
     return children.map((c) =>
       emitNode(c.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
     ).join('')
+  }
+
+  function asIdentifier(raw: unknown): string {
+    const src = String(raw ?? '').trim()
+    const sanitized = src.replace(/[^a-zA-Z0-9_]/g, '_')
+    return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `v_${sanitized || 'value'}`
+  }
+
+  function resolveValueInput(index: number, fallback: string): string {
+    const child = getChildRef(index)
+    if (!child) return fallback
+
+    const valueNode = nodesMap.get(child.nodeId)
+    if (!valueNode) return fallback
+    const valueData = valueNode.data as Record<string, unknown>
+
+    switch (valueNode.type) {
+      case 'parameter_node':
+      case 'parameter_list':
+      case 'var_node':
+        return asIdentifier(valueData.varName)
+      default:
+        return fallback
+    }
   }
 
   // For transform nodes: if no child, just emit a comment
@@ -104,21 +136,37 @@ function emitNode(
 
   switch (node.type) {
     // ── 3D Primitives ─────────────────────────────────────────────────────────
-    case 'sphere':
-      result = `${pad}sphere(r = ${num(d.r)}, $fn = ${num(d.fn)});\n`
+    case 'sphere': {
+      const radiusExpr = resolveValueInput(0, String(num(d.r)))
+      const fnExpr = resolveValueInput(1, String(num(d.fn)))
+      result = `${pad}sphere(r = ${radiusExpr}, $fn = ${fnExpr});\n`
       break
+    }
 
-    case 'cube':
-      result = `${pad}cube([${num(d.x)}, ${num(d.y)}, ${num(d.z)}], center = ${bool(d.center)});\n`
+    case 'cube': {
+      const xExpr = resolveValueInput(0, String(num(d.x)))
+      const yExpr = resolveValueInput(1, String(num(d.y)))
+      const zExpr = resolveValueInput(2, String(num(d.z)))
+      result = `${pad}cube([${xExpr}, ${yExpr}, ${zExpr}], center = ${bool(d.center)});\n`
       break
+    }
 
-    case 'cylinder':
-      result = `${pad}cylinder(h = ${num(d.h)}, r1 = ${num(d.r1)}, r2 = ${num(d.r2)}, center = ${bool(d.center)}, $fn = ${num(d.fn)});\n`
+    case 'cylinder': {
+      const hExpr = resolveValueInput(0, String(num(d.h)))
+      const r1Expr = resolveValueInput(1, String(num(d.r1)))
+      const r2Expr = resolveValueInput(2, String(num(d.r2)))
+      const centerExpr = resolveValueInput(3, bool(d.center))
+      const fnExpr = resolveValueInput(4, String(num(d.fn)))
+      result = `${pad}cylinder(h = ${hExpr}, r1 = ${r1Expr}, r2 = ${r2Expr}, center = ${centerExpr}, $fn = ${fnExpr});\n`
       break
+    }
 
-    case 'polyhedron':
-      result = `${pad}polyhedron(points = ${d.points}, faces = ${d.faces});\n`
+    case 'polyhedron': {
+      const pointsExpr = resolveValueInput(0, String(d.points))
+      const facesExpr = resolveValueInput(1, String(d.faces))
+      result = `${pad}polyhedron(points = ${pointsExpr}, faces = ${facesExpr});\n`
       break
+    }
 
     // ── 2D Primitives ─────────────────────────────────────────────────────────
     case 'circle':
@@ -211,8 +259,16 @@ function emitNode(
       break
 
     case 'color':
-      result = emitTransform(`color([${num(d.r)}, ${num(d.g)}, ${num(d.b)}], ${num(d.alpha)})`)
+    {
+      const hex = String(d.hex ?? '').trim()
+      const hexFallback = /^#[0-9a-fA-F]{6}$/.test(hex)
+        ? `"${hex}"`
+        : `[${num(d.r)}, ${num(d.g)}, ${num(d.b)}]`
+      const colorExpr = resolveValueInput(1, hexFallback)
+      const alphaExpr = resolveValueInput(2, String(num(d.alpha)))
+      result = emitTransform(`color(${colorExpr}, ${alphaExpr})`)
       break
+    }
 
     case 'projection':
       result = emitTransform(`projection(cut = ${bool(d.cut)})`)
@@ -234,10 +290,40 @@ function emitNode(
 
     case 'if_cond': {
       const condition = d.condition || 'true'
-      if (!hasChild(0)) {
+      const hasThen = hasChild(0)
+      const hasElse = hasChild(1)
+      if (!hasThen && !hasElse) {
         result = `${pad}// if: no child connected\n`
       } else {
-        result = `${pad}if (${condition}) {\n${getChild(0)}${pad}}\n`
+        result = `${pad}if (${condition}) {\n${getChild(0)}${pad}}`
+        if (hasElse) {
+          result += ` else {\n${getChild(1)}${pad}}`
+        }
+        result += '\n'
+      }
+      break
+    }
+
+    case 'intersection_for': {
+      const varName = d.varName || 'i'
+      const start = num(d.start)
+      const end   = num(d.end)
+      const step  = num(d.step) || 1
+      if (!hasChild(0)) {
+        result = `${pad}// intersection_for: no child connected\n`
+      } else {
+        result = `${pad}intersection_for (${varName} = [${start} : ${step} : ${end}])\n${getChild(0)}`
+      }
+      break
+    }
+
+    case 'assert_node': {
+      const condition = d.condition || 'true'
+      const message = escapeString(d.message)
+      if (!hasChild(0)) {
+        result = `${pad}assert(${condition}, "${message}");\n`
+      } else {
+        result = `${pad}assert(${condition}, "${message}") {\n${getChild(0)}${pad}}\n`
       }
       break
     }
@@ -262,6 +348,37 @@ function emitNode(
       const vName = d.varName || 'x'
       const vValue = d.value ?? 0
       result = `${pad}${vName} = ${vValue};\n`
+      break
+    }
+
+    case 'parameter_node': {
+      const vName = d.varName || 'param'
+      const vValue = d.value ?? 0
+      result = `${pad}${vName} = ${vValue};\n`
+      break
+    }
+
+    case 'parameter_list': {
+      const vName = d.varName || 'list_param'
+      const vValue = d.value ?? '[]'
+      result = `${pad}${vName} = ${vValue};\n`
+      break
+    }
+
+    case 'module_call': {
+      const moduleName = (d.moduleName || '').toString().trim()
+      const args = (d.args || '').toString().trim()
+      if (!moduleName) {
+        result = `${pad}// module_call: no module selected\n`
+        break
+      }
+
+      const callHead = `${moduleName}(${args})`
+      if (children.length === 0) {
+        result = `${pad}${callHead};\n`
+      } else {
+        result = `${pad}${callHead} {\n${getAllChildren()}${pad}}\n`
+      }
       break
     }
 
@@ -299,6 +416,15 @@ export function generateCode(nodes: Node[], edges: Edge[]): string {
   }
 
   const visited = new Set<string>()
+
+  // Emit declarations first so parameter/variable references on value ports are defined.
+  for (const node of nodes) {
+    if (node.type === 'parameter_node' || node.type === 'parameter_list' || node.type === 'var_node') {
+      if (!visited.has(node.id)) {
+        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0)
+      }
+    }
+  }
 
   if (roots.length === 0) {
     code += '// WARNING: No root nodes found (possible cycle in entire graph)\n'

@@ -162,10 +162,11 @@ function ErrorDisplay({ message, logs }: { message: string; logs: string | null 
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
 export function PreviewPanel() {
-  const { renderStatus, renderError, renderLogs, renderResultSTL, renderResultPNG, previewMode } = useEditorStore()
+  const { renderStatus, renderError, renderLogs, renderResultSTL, renderResultPNG, previewMode, generatedCode } = useEditorStore()
+  const hasColorHints = /\bcolor\s*\(/.test(generatedCode)
 
   return (
-    <div className="w-80 shrink-0 bg-gray-900 border-l border-white/10 flex flex-col">
+    <div className="h-full bg-gray-900 border-l border-white/10 flex flex-col">
       {/* Header */}
       <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between shrink-0">
         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Preview</span>
@@ -184,6 +185,12 @@ export function PreviewPanel() {
 
       {/* Content */}
       <div className="flex-1 relative overflow-hidden">
+        {previewMode === 'stl' && hasColorHints && (
+          <div className="absolute top-2 left-2 right-2 z-10 rounded border border-amber-500/40 bg-amber-900/30 px-2 py-1 text-[10px] text-amber-200">
+            STL preview is geometry-only. Use PNG mode for OpenSCAD color and opacity preview.
+          </div>
+        )}
+
         {renderStatus === 'idle' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 text-center px-6">
             <div className="text-5xl mb-4 opacity-30">◈</div>

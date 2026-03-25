@@ -32,6 +32,10 @@ import { ForLoopNode }      from './control/ForLoopNode'
 import { IfCondNode }       from './control/IfCondNode'
 import { VarNode }          from './control/VarNode'
 import { EchoNode }         from './control/EchoNode'
+import { IntersectionForNode } from './control/IntersectionForNode'
+import { AssertNode }       from './control/AssertNode'
+import { ParameterNode, ParameterListNode } from './control/ParameterNode'
+import { ModuleCallNode }   from './control/ModuleCallNode'
 
 import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
 import { SurfaceNode }      from './import_nodes/SurfaceNode'
@@ -81,6 +85,11 @@ export const nodeTypes: NodeTypes = {
   if_cond:          IfCondNode,
   var_node:         VarNode,
   echo_node:        EchoNode,
+  intersection_for: IntersectionForNode,
+  assert_node:      AssertNode,
+  parameter_node:   ParameterNode,
+  parameter_list:   ParameterListNode,
+  module_call:      ModuleCallNode,
 
   // Import
   import_stl:       ImportSTLNode,

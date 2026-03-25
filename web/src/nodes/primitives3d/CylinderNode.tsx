@@ -7,7 +7,19 @@ export function CylinderNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as CylinderData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="primitive3d" label="cylinder" selected={selected}>
+    <BaseNode
+      id={id}
+      category="primitive3d"
+      label="cylinder"
+      selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'h' },
+        { id: 'in-1', label: 'r1' },
+        { id: 'in-2', label: 'r2' },
+        { id: 'in-3', label: 'center' },
+        { id: 'in-4', label: '$fn' },
+      ]}
+    >
       <NumberInput label="height" value={d.h}  min={0.01} step={0.5} onChange={(v) => update(id, { h: v })} />
       <NumberInput label="r1"    value={d.r1} min={0}    step={0.5} onChange={(v) => update(id, { r1: v })} />
       <NumberInput label="r2"    value={d.r2} min={0}    step={0.5} onChange={(v) => update(id, { r2: v })} />

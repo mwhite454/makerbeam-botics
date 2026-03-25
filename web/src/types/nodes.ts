@@ -80,7 +80,7 @@ export interface LinearExtrudeData  { height: number; center: boolean; twist: nu
 export interface RotateExtrudeData  { angle: number; fn: number }
 
 // Modifiers
-export interface ColorData        { r: number; g: number; b: number; alpha: number }
+export interface ColorData        { r: number; g: number; b: number; alpha: number; hex: string; advanced: boolean }
 export interface ProjectionData   { cut: boolean }
 
 // Control Flow
@@ -88,6 +88,11 @@ export interface ForLoopData      { varName: string; start: number; end: number;
 export interface IfCondData        { condition: string }
 export interface VarData           { varName: string; value: string }
 export interface EchoData          { message: string }
+export interface IntersectionForData { varName: string; start: number; end: number; step: number }
+export interface AssertData        { condition: string; message: string }
+export interface ParameterData     { varName: string; value: string }
+export interface ParameterListData { varName: string; value: string; items: string[] }
+export interface ModuleCallData    { moduleName: string; args: string }
 
 // Import
 export interface ImportSTLData     { filename: string }
@@ -123,6 +128,11 @@ export type AllNodeData =
   | IfCondData
   | VarData
   | EchoData
+  | IntersectionForData
+  | AssertData
+  | ParameterData
+  | ParameterListData
+  | ModuleCallData
   | ImportSTLData
   | SurfaceData
   | MakerBeamData
@@ -170,7 +180,7 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   // Modifiers
   { type: 'hull',        label: 'hull',        category: 'modifier', defaultData: { childCount: 2 } as BooleanData },
   { type: 'minkowski',   label: 'minkowski',   category: 'modifier', defaultData: { childCount: 2 } as BooleanData },
-  { type: 'color',       label: 'color',       category: 'modifier', defaultData: { r: 0.5, g: 0.5, b: 0.8, alpha: 1 } as ColorData },
+  { type: 'color',       label: 'color',       category: 'modifier', defaultData: { r: 0.5, g: 0.5, b: 0.8, alpha: 1, hex: '#8080cc', advanced: false } as ColorData },
   { type: 'projection',  label: 'projection',  category: 'modifier', defaultData: { cut: false } as ProjectionData },
   { type: 'render_node', label: 'render',      category: 'modifier', defaultData: { childCount: 1 } as BooleanData },
 
@@ -179,6 +189,11 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   { type: 'if_cond',   label: 'if',       category: 'control', defaultData: { condition: 'true' } as IfCondData },
   { type: 'var_node',  label: 'variable', category: 'control', defaultData: { varName: 'x', value: '10' } as VarData },
   { type: 'echo_node', label: 'echo',     category: 'control', defaultData: { message: 'debug' } as EchoData },
+  { type: 'intersection_for', label: 'intersection_for', category: 'control', defaultData: { varName: 'i', start: 0, end: 5, step: 1 } as IntersectionForData },
+  { type: 'assert_node', label: 'assert', category: 'control', defaultData: { condition: 'true', message: '' } as AssertData },
+  { type: 'parameter_node', label: 'parameter', category: 'control', defaultData: { varName: 'length', value: '100' } as ParameterData },
+  { type: 'parameter_list', label: 'parameter_list', category: 'control', defaultData: { varName: 'points', value: '[0, 1, 2]', items: ['0', '1', '2'] } as ParameterListData },
+  { type: 'module_call', label: 'module_call', category: 'control', defaultData: { moduleName: '', args: '' } as ModuleCallData },
 
   // Import
   { type: 'import_stl',   label: 'import',  category: 'import', defaultData: { filename: 'model.stl' } as ImportSTLData },

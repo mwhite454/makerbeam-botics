@@ -25,7 +25,7 @@ export function NodePalette() {
   }))
 
   return (
-    <aside className="w-44 shrink-0 bg-gray-900/80 border-r border-white/10 overflow-y-auto flex flex-col gap-0">
+    <aside className="h-full bg-gray-900/80 border-r border-white/10 overflow-y-auto flex flex-col gap-0">
       <div className="px-3 py-2 border-b border-white/10">
         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nodes</span>
       </div>

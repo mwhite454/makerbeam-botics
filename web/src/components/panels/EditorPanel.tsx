@@ -13,6 +13,9 @@ import '@xyflow/react/dist/style.css'
 import { useEditorStore }    from '@/store/editorStore'
 import { nodeTypes }         from '@/nodes'
 import { PALETTE_ITEMS }     from '@/types/nodes'
+import { DeletableEdge }     from '@/components/DeletableEdge'
+
+const edgeTypes = { default: DeletableEdge }
 
 let nodeIdCounter = 1
 
@@ -69,6 +72,7 @@ export function EditorPanel() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -78,10 +82,14 @@ export function EditorPanel() {
         onKeyDown={onKeyDown}
         fitView
         deleteKeyCode={['Delete', 'Backspace']}
+        edgesFocusable
         multiSelectionKeyCode="Shift"
         selectionKeyCode="Shift"
         className="bg-gray-950"
         defaultEdgeOptions={{
+          type: 'default',
+          selectable: true,
+          focusable: true,
           style: { stroke: '#60a5fa', strokeWidth: 2 },
           animated: false,
         }}

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Handle, Position } from '@xyflow/react'
+import { Handle, Position, useReactFlow } from '@xyflow/react'
 import { NodeCategory, CATEGORY_COLORS, CATEGORY_TEXT } from '@/types/nodes'
 
 interface HandleConfig {
@@ -18,6 +18,7 @@ interface BaseNodeProps {
 }
 
 export function BaseNode({
+  id,
   category,
   label,
   selected,
@@ -27,42 +28,62 @@ export function BaseNode({
 }: BaseNodeProps) {
   const headerColor = CATEGORY_COLORS[category]
   const textColor   = CATEGORY_TEXT[category]
+  const { deleteElements } = useReactFlow()
+
+  const onDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    deleteElements({ nodes: [{ id }] })
+  }
+
+  const handleRowGap = 34
+  const handleBottomReserve = 40
+  const inputLabelLaneWidth = inputHandles.length > 0 ? 72 : 0
+  const bodyMinHeight = inputHandles.length > 0
+    ? inputHandles.length * handleRowGap + handleBottomReserve
+    : 96
 
   return (
     <div
       className={`
-        rounded-lg overflow-hidden shadow-xl border transition-all
+        rounded-lg shadow-xl border transition-all
         ${selected
           ? 'border-white/60 shadow-white/20 ring-1 ring-blue-400/50'
           : 'border-white/10 shadow-black/40'}
         bg-gray-900/95 backdrop-blur-sm
       `}
-      style={{ minWidth: 200 }}
+      style={{ minWidth: 210 }}
     >
       {/* Header */}
-      <div className={`${headerColor} ${textColor} px-3 py-1.5 text-xs font-bold tracking-wide uppercase select-none`}>
-        {label}
+      <div className={`${headerColor} ${textColor} px-3 py-1.5 text-xs font-bold tracking-wide uppercase select-none rounded-t-lg flex items-center justify-between`}>
+        <span>{label}</span>
+        <button
+          onClick={onDelete}
+          className="ml-2 opacity-50 hover:opacity-100 transition-opacity text-sm leading-none nodrag nopan"
+          title="Remove node"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Body */}
-      <div className="px-3 py-2.5 space-y-2 relative" style={{ minHeight: inputHandles.length > 0 ? inputHandles.length * 28 + 16 : undefined }}>
+      <div className="px-4 pt-3.5 pb-6 space-y-3 relative" style={{ minHeight: bodyMinHeight }}>
         {/* Input handles — positioned in the body area */}
         {inputHandles.map((handle, i) => {
           const topOffset = inputHandles.length === 1
-            ? 20
-            : 12 + i * 28
+            ? 24
+            : 14 + i * handleRowGap
           return (
             <React.Fragment key={handle.id}>
               <Handle
                 type="target"
                 position={Position.Left}
                 id={handle.id}
-                style={{ top: `${topOffset + 30}px`, background: '#94a3b8' }}
-                className="!w-3 !h-3 !border-2 !border-gray-600 hover:!border-blue-400 !-left-1.5"
+                style={{ top: `${topOffset + 34}px`, background: '#93c5fd' }}
+                className="!w-3.5 !h-3.5 !border-2 !border-slate-300/70 hover:!border-blue-300 !-left-2"
               />
               <div
-                className="text-[10px] text-gray-500 absolute left-4 pointer-events-none"
-                style={{ top: `${topOffset + 24}px` }}
+                className="text-[10px] text-gray-400 absolute left-5 pointer-events-none font-medium tracking-wide"
+                style={{ top: `${topOffset + 27}px` }}
               >
                 {handle.label}
               </div>
@@ -71,7 +92,7 @@ export function BaseNode({
         })}
 
         {/* Field content */}
-        <div className={inputHandles.length > 0 ? 'ml-6' : ''}>
+        <div style={{ marginLeft: inputLabelLaneWidth }}>
           {children}
         </div>
       </div>
@@ -83,7 +104,7 @@ export function BaseNode({
           position={Position.Right}
           id="out"
           style={{ background: '#60a5fa', top: '50%' }}
-          className="!w-3 !h-3 !border-2 !border-gray-600 hover:!border-blue-400 !-right-1.5"
+          className="!w-3.5 !h-3.5 !border-2 !border-slate-300/70 hover:!border-blue-300 !-right-2"
         />
       )}
     </div>

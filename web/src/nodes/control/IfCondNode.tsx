@@ -8,7 +8,7 @@ export function IfCondNode({ id, data, selected }: NodeProps) {
   const update = useEditorStore((s) => s.updateNodeData)
   return (
     <BaseNode id={id} category="control" label="if" selected={selected}
-      inputHandles={[{ id: 'in-0', label: 'then' }]}>
+      inputHandles={[{ id: 'in-0', label: 'then' }, { id: 'in-1', label: 'else' }]}>
       <TextInput label="condition" value={d.condition} onChange={(v) => update(id, { condition: v })} />
     </BaseNode>
   )

@@ -7,7 +7,16 @@ export function PolyhedronNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as PolyhedronData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="primitive3d" label="polyhedron" selected={selected}>
+    <BaseNode
+      id={id}
+      category="primitive3d"
+      label="polyhedron"
+      selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'points' },
+        { id: 'in-1', label: 'faces' },
+      ]}
+    >
       <TextInput label="points" value={d.points} onChange={(v) => update(id, { points: v })} />
       <TextInput label="faces"  value={d.faces}  onChange={(v) => update(id, { faces: v })} />
     </BaseNode>
