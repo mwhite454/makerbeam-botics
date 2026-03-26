@@ -6,9 +6,10 @@
 
 import { createOpenSCAD } from 'openscad-wasm'
 import type { OpenSCAD } from 'openscad-wasm'
+import { loadBOSL2, mountBOSL2InFS } from './bosl2Loader'
 
 export type WorkerRequest =
-  | { type: 'render'; id: string; code: string; format: 'stl' | 'png' }
+  | { type: 'render'; id: string; code: string; format: 'stl' | 'png'; useBosl2?: boolean }
   | { type: 'ping' }
 
 export type WorkerResponse =
@@ -16,6 +17,7 @@ export type WorkerResponse =
   | { type: 'result'; id: string; format: 'stl' | 'png'; data: ArrayBuffer }
   | { type: 'error';  id: string; message: string; logs: string }
   | { type: 'pong' }
+  | { type: 'bosl2_status'; status: 'loading' | 'ready' | 'error'; message?: string }
 
 let wasmReady = false
 let initialising = false
@@ -54,11 +56,11 @@ function handleRequest(req: WorkerRequest) {
   }
   if (req.type === 'render') {
     if (!wasmReady) { pendingQueue.push(req); return }
-    runRender(req.id, req.code, req.format)
+    runRender(req.id, req.code, req.format, req.useBosl2 ?? false)
   }
 }
 
-async function runRender(id: string, code: string, format: 'stl' | 'png') {
+async function runRender(id: string, code: string, format: 'stl' | 'png', useBosl2: boolean) {
   const stdout: string[] = []
   const stderr: string[] = []
 
@@ -86,6 +88,24 @@ async function runRender(id: string, code: string, format: 'stl' | 'png') {
   const outputPath = `/output${outputExt}`
 
   try {
+    if (useBosl2) {
+      const statusMsg: WorkerResponse = { type: 'bosl2_status', status: 'loading' }
+      self.postMessage(statusMsg)
+      try {
+        await loadBOSL2()
+        mountBOSL2InFS(raw.FS)
+        const readyMsg: WorkerResponse = { type: 'bosl2_status', status: 'ready' }
+        self.postMessage(readyMsg)
+      } catch (bosl2Err) {
+        const errMsg = bosl2Err instanceof Error ? bosl2Err.message : String(bosl2Err)
+        const errStatus: WorkerResponse = { type: 'bosl2_status', status: 'error', message: errMsg }
+        self.postMessage(errStatus)
+        const renderErr: WorkerResponse = { type: 'error', id, message: `Failed to load BOSL2: ${errMsg}`, logs: '' }
+        self.postMessage(renderErr)
+        return
+      }
+    }
+
     raw.FS.writeFile(inputPath, code)
 
     const args: string[] = [inputPath, '-o', outputPath]

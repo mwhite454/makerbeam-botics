@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import type { WorkerRequest, WorkerResponse } from './openscadWorker.worker'
 
-export type WasmStatus = 'loading' | 'ready' | 'unavailable'
+export type WasmStatus  = 'loading' | 'ready' | 'unavailable'
+export type Bosl2Status = 'idle' | 'loading' | 'ready' | 'error'
 
 export interface RenderError {
   message: string
@@ -17,6 +18,9 @@ interface PendingResolve {
 let sharedWorker: Worker | null = null
 let sharedWorkerStatus: WasmStatus = 'loading'
 const statusListeners = new Set<(s: WasmStatus) => void>()
+
+let sharedBosl2Status: Bosl2Status = 'idle'
+const bosl2StatusListeners = new Set<(s: Bosl2Status) => void>()
 
 function getOrCreateWorker(): Worker {
   if (!sharedWorker) {
@@ -36,7 +40,8 @@ function getOrCreateWorker(): Worker {
 }
 
 export function useOpenSCAD() {
-  const [wasmStatus, setWasmStatus] = useState<WasmStatus>(sharedWorkerStatus)
+  const [wasmStatus,  setWasmStatus]  = useState<WasmStatus>(sharedWorkerStatus)
+  const [bosl2Status, setBosl2Status] = useState<Bosl2Status>(sharedBosl2Status)
   const pendingMap = useRef(new Map<string, PendingResolve>())
   const workerRef  = useRef<Worker | null>(null)
 
@@ -54,11 +59,18 @@ export function useOpenSCAD() {
     statusListeners.add(onStatus)
     setWasmStatus(sharedWorkerStatus)
 
+    const onBosl2Status = (s: Bosl2Status) => setBosl2Status(s)
+    bosl2StatusListeners.add(onBosl2Status)
+    setBosl2Status(sharedBosl2Status)
+
     const onMessage = (event: MessageEvent<WorkerResponse>) => {
       const msg = event.data
       if (msg.type === 'ready') {
         sharedWorkerStatus = 'ready'
         statusListeners.forEach((fn) => fn('ready'))
+      } else if (msg.type === 'bosl2_status') {
+        sharedBosl2Status = msg.status
+        bosl2StatusListeners.forEach((fn) => fn(msg.status))
       } else if (msg.type === 'result') {
         const pending = pendingMap.current.get(msg.id)
         if (pending) {
@@ -85,11 +97,12 @@ export function useOpenSCAD() {
     return () => {
       worker.removeEventListener('message', onMessage)
       statusListeners.delete(onStatus)
+      bosl2StatusListeners.delete(onBosl2Status)
     }
   }, [])
 
   const render = useCallback(
-    (code: string, format: 'stl' | 'png' = 'stl'): Promise<ArrayBuffer> => {
+    (code: string, format: 'stl' | 'png' = 'stl', useBosl2 = false): Promise<ArrayBuffer> => {
       return new Promise((resolve, reject) => {
         let worker: Worker
         try {
@@ -102,7 +115,7 @@ export function useOpenSCAD() {
         const id = crypto.randomUUID()
         pendingMap.current.set(id, { resolve, reject })
 
-        const req: WorkerRequest = { type: 'render', id, code, format }
+        const req: WorkerRequest = { type: 'render', id, code, format, useBosl2 }
         worker.postMessage(req)
 
         // Timeout after 120 seconds
@@ -117,5 +130,5 @@ export function useOpenSCAD() {
     []
   )
 
-  return { wasmStatus, render }
+  return { wasmStatus, bosl2Status, render }
 }

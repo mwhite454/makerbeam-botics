@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useEditorStore } from '@/store/editorStore'
+import { useOpenSCAD } from '@/wasm/useOpenSCAD'
 
 // ─── Three.js STL viewer ──────────────────────────────────────────────────────
 
@@ -163,6 +164,7 @@ function ErrorDisplay({ message, logs }: { message: string; logs: string | null 
 
 export function PreviewPanel() {
   const { renderStatus, renderError, renderLogs, renderResultSTL, renderResultPNG, previewMode, generatedCode } = useEditorStore()
+  const { bosl2Status } = useOpenSCAD()
   const hasColorHints = /\bcolor\s*\(/.test(generatedCode)
 
   return (
@@ -201,7 +203,11 @@ export function PreviewPanel() {
         {renderStatus === 'rendering' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-gray-500">Compiling with OpenSCAD WASM…</p>
+            <p className="text-xs text-gray-500">
+              {bosl2Status === 'loading'
+                ? 'Fetching BOSL2 library (one-time)…'
+                : 'Compiling with OpenSCAD WASM…'}
+            </p>
           </div>
         )}
 

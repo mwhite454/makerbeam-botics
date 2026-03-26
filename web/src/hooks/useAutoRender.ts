@@ -15,10 +15,11 @@ export function useAutoRender() {
   const setRenderResultSTL = useEditorStore((s) => s.setRenderResultSTL)
   const setRenderResultPNG = useEditorStore((s) => s.setRenderResultPNG)
 
-  const { render, wasmStatus } = useOpenSCAD()
+  const { render, wasmStatus, bosl2Status } = useOpenSCAD()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pngUnavailableRef = useRef(false)
   const hasColorHints = /\bcolor\s*\(/.test(generatedCode)
+  const useBosl2 = generatedCode.includes('include <BOSL2/std.scad>')
 
   useEffect(() => {
     if (!autoColorPreview) return
@@ -33,10 +34,11 @@ export function useAutoRender() {
     if (wasmStatus !== 'ready') return
 
     const effectiveMode: 'stl' | 'png' = mode === 'png' && pngUnavailableRef.current ? 'stl' : mode
+    const needsBosl2 = code.includes('include <BOSL2/std.scad>')
 
     setRenderStatus('rendering')
     try {
-      const data = await render(code, effectiveMode)
+      const data = await render(code, effectiveMode, needsBosl2)
       if (effectiveMode === 'stl') {
         setRenderResultSTL(data)
       } else {
@@ -55,7 +57,7 @@ export function useAutoRender() {
       if (isPngEnvironmentIssue) {
         try {
           pngUnavailableRef.current = true
-          const stlData = await render(code, 'stl')
+          const stlData = await render(code, 'stl', needsBosl2)
           setPreviewMode('stl')
           setRenderResultSTL(stlData)
           return
@@ -85,5 +87,5 @@ export function useAutoRender() {
     }
   }, [generatedCode, autoRender, previewMode, doRender])
 
-  return { doRender: () => doRender(generatedCode, previewMode) }
+  return { doRender: () => doRender(generatedCode, previewMode), bosl2Status, useBosl2 }
 }

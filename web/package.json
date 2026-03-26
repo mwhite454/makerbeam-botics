@@ -11,6 +11,7 @@
   "dependencies": {
     "@types/react-color": "^3.0.13",
     "@xyflow/react": "^12.3.6",
+    "fflate": "^0.8.2",
     "immer": "^10.1.1",
     "openscad-wasm": "^0.0.4",
     "react-color": "^2.19.3",

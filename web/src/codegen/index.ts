@@ -1,5 +1,11 @@
 import type { Node, Edge } from '@xyflow/react'
 import { MAKERBEAM_PREAMBLE } from './makerbeamPreamble'
+import type {
+  Bosl2CuboidData,
+  Bosl2CylData,
+  Bosl2TubeData,
+  Bosl2ThreadedRodData,
+} from '@/types/nodes'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -387,6 +393,44 @@ function emitNode(
       result = `${pad}makerbeam(${num(d.length)});\n`
       break
 
+    // ── BOSL2 ─────────────────────────────────────────────────────────────────
+    case 'bosl2_cuboid': {
+      const bd = node.data as unknown as Bosl2CuboidData
+      const args: string[] = [`[${num(bd.x)}, ${num(bd.y)}, ${num(bd.z)}]`]
+      if (num(bd.rounding) > 0) args.push(`rounding=${num(bd.rounding)}`)
+      if (num(bd.chamfer)  > 0) args.push(`chamfer=${num(bd.chamfer)}`)
+      result = `${pad}cuboid(${args.join(', ')});\n`
+      break
+    }
+    case 'bosl2_cyl': {
+      const bd = node.data as unknown as Bosl2CylData
+      const args: string[] = [`h=${num(bd.h)}`, `r=${num(bd.r)}`]
+      if (num(bd.chamfer) > 0) args.push(`chamfer=${num(bd.chamfer)}`)
+      args.push(`$fn=${num(bd.fn)}`)
+      result = `${pad}cyl(${args.join(', ')});\n`
+      break
+    }
+    case 'bosl2_tube': {
+      const bd = node.data as unknown as Bosl2TubeData
+      result = `${pad}tube(h=${num(bd.h)}, or=${num(bd.r)}, wall=${num(bd.wall)}, $fn=${num(bd.fn)});\n`
+      break
+    }
+    case 'bosl2_xrot':
+    case 'bosl2_yrot':
+    case 'bosl2_zrot': {
+      const fn = node.type!.replace('bosl2_', '')
+      const child = getChild(0)
+      result = child
+        ? `${pad}${fn}(${num(d.angle)})\n${child}`
+        : `${pad}${fn}(${num(d.angle)});\n`
+      break
+    }
+    case 'bosl2_threaded_rod': {
+      const bd = node.data as unknown as Bosl2ThreadedRodData
+      result = `${pad}threaded_rod(d=${num(bd.d)}, l=${num(bd.l)}, pitch=${num(bd.pitch)}, $fn=${num(bd.fn)});\n`
+      break
+    }
+
     default:
       result = `${pad}// Unknown node type: ${node.type}\n`
   }
@@ -409,8 +453,12 @@ export function generateCode(nodes: Node[], edges: Edge[]): string {
   const roots = findRoots(nodes, edges)
 
   const hasMakerBeam = nodes.some((n) => n.type === 'makerbeam')
+  const hasBosl2     = nodes.some((n) => n.type?.startsWith('bosl2_'))
 
   let code = ''
+  if (hasBosl2) {
+    code += 'include <BOSL2/std.scad>\n\n'
+  }
   if (hasMakerBeam) {
     code += MAKERBEAM_PREAMBLE + '\n'
   }

@@ -10,6 +10,7 @@ export type NodeCategory =
   | 'control'
   | 'import'
   | 'makerbeam'
+  | 'bosl2'
 
 // ─── Category styling ─────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ export const CATEGORY_COLORS: Record<NodeCategory, string> = {
   control:     'bg-amber-600',
   import:      'bg-gray-600',
   makerbeam:   'bg-yellow-500',
+  bosl2:       'bg-teal-600',
 }
 
 export const CATEGORY_TEXT: Record<NodeCategory, string> = {
@@ -35,6 +37,7 @@ export const CATEGORY_TEXT: Record<NodeCategory, string> = {
   control:     'text-white',
   import:      'text-white',
   makerbeam:   'text-gray-900',
+  bosl2:       'text-white',
 }
 
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
@@ -47,6 +50,7 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
   control:     'Control Flow',
   import:      'Import / Export',
   makerbeam:   'MakerBeam',
+  bosl2:       'BOSL2',
 }
 
 // ─── Node data types ──────────────────────────────────────────────────────────
@@ -101,6 +105,15 @@ export interface SurfaceData       { filename: string; center: boolean }
 // MakerBeam
 export interface MakerBeamData    { length: number }
 
+// BOSL2
+export interface Bosl2CuboidData      { x: number; y: number; z: number; rounding: number; chamfer: number }
+export interface Bosl2CylData         { h: number; r: number; chamfer: number; fn: number }
+export interface Bosl2TubeData        { h: number; r: number; wall: number; fn: number }
+export interface Bosl2XRotData        { angle: number }
+export interface Bosl2YRotData        { angle: number }
+export interface Bosl2ZRotData        { angle: number }
+export interface Bosl2ThreadedRodData { d: number; l: number; pitch: number; fn: number }
+
 // ─── Union type ───────────────────────────────────────────────────────────────
 
 export type AllNodeData =
@@ -136,6 +149,13 @@ export type AllNodeData =
   | ImportSTLData
   | SurfaceData
   | MakerBeamData
+  | Bosl2CuboidData
+  | Bosl2CylData
+  | Bosl2TubeData
+  | Bosl2XRotData
+  | Bosl2YRotData
+  | Bosl2ZRotData
+  | Bosl2ThreadedRodData
 
 // ─── Palette definition ───────────────────────────────────────────────────────
 
@@ -201,4 +221,13 @@ export const PALETTE_ITEMS: PaletteItem[] = [
 
   // MakerBeam
   { type: 'makerbeam', label: 'makerbeam', category: 'makerbeam', defaultData: { length: 150 } as MakerBeamData },
+
+  // BOSL2
+  { type: 'bosl2_cuboid',       label: 'cuboid',       category: 'bosl2', defaultData: { x: 10, y: 10, z: 10, rounding: 0, chamfer: 0 } as Bosl2CuboidData },
+  { type: 'bosl2_cyl',          label: 'cyl',          category: 'bosl2', defaultData: { h: 10, r: 5, chamfer: 0, fn: 32 } as Bosl2CylData },
+  { type: 'bosl2_tube',         label: 'tube',         category: 'bosl2', defaultData: { h: 10, r: 8, wall: 2, fn: 32 } as Bosl2TubeData },
+  { type: 'bosl2_xrot',         label: 'xrot',         category: 'bosl2', defaultData: { angle: 0 } as Bosl2XRotData },
+  { type: 'bosl2_yrot',         label: 'yrot',         category: 'bosl2', defaultData: { angle: 0 } as Bosl2YRotData },
+  { type: 'bosl2_zrot',         label: 'zrot',         category: 'bosl2', defaultData: { angle: 0 } as Bosl2ZRotData },
+  { type: 'bosl2_threaded_rod', label: 'threaded_rod', category: 'bosl2', defaultData: { d: 10, l: 30, pitch: 2, fn: 32 } as Bosl2ThreadedRodData },
 ]

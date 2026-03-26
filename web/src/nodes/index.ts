@@ -42,6 +42,14 @@ import { SurfaceNode }      from './import_nodes/SurfaceNode'
 
 import { MakerBeamNode }    from './makerbeam/MakerBeamNode'
 
+import { Bosl2CuboidNode }      from './bosl2/Bosl2CuboidNode'
+import { Bosl2CylNode }         from './bosl2/Bosl2CylNode'
+import { Bosl2TubeNode }        from './bosl2/Bosl2TubeNode'
+import { Bosl2XRotNode }        from './bosl2/Bosl2XRotNode'
+import { Bosl2YRotNode }        from './bosl2/Bosl2YRotNode'
+import { Bosl2ZRotNode }        from './bosl2/Bosl2ZRotNode'
+import { Bosl2ThreadedRodNode } from './bosl2/Bosl2ThreadedRodNode'
+
 export const nodeTypes: NodeTypes = {
   // 3D Primitives
   sphere:           SphereNode,
@@ -97,4 +105,13 @@ export const nodeTypes: NodeTypes = {
 
   // MakerBeam
   makerbeam:        MakerBeamNode,
+
+  // BOSL2
+  bosl2_cuboid:       Bosl2CuboidNode,
+  bosl2_cyl:          Bosl2CylNode,
+  bosl2_tube:         Bosl2TubeNode,
+  bosl2_xrot:         Bosl2XRotNode,
+  bosl2_yrot:         Bosl2YRotNode,
+  bosl2_zrot:         Bosl2ZRotNode,
+  bosl2_threaded_rod: Bosl2ThreadedRodNode,
 }
