@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import type { WorkerRequest, WorkerResponse } from './openscadWorker.worker'
+import type { RenderFormat, WorkerRequest, WorkerResponse } from './openscadWorker.worker'
 
 export type WasmStatus = 'loading' | 'ready' | 'unavailable'
 
@@ -89,7 +89,7 @@ export function useOpenSCAD() {
   }, [])
 
   const render = useCallback(
-    (code: string, format: 'stl' | 'png' = 'stl'): Promise<ArrayBuffer> => {
+    (code: string, format: RenderFormat = 'stl'): Promise<ArrayBuffer> => {
       return new Promise((resolve, reject) => {
         let worker: Worker
         try {

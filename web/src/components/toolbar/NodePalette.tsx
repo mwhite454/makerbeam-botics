@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { PALETTE_ITEMS, CATEGORY_COLORS, CATEGORY_TEXT, CATEGORY_LABELS, type NodeCategory } from '@/types/nodes'
+import { useEditorStore } from '@/store/editorStore'
 
 const CATEGORY_ORDER: NodeCategory[] = [
   'primitive3d',
@@ -13,7 +14,18 @@ const CATEGORY_ORDER: NodeCategory[] = [
   'makerbeam',
 ]
 
+// Node types only available on module tabs
+const MODULE_ONLY_TYPES = new Set(['module_arg'])
+
 export function NodePalette() {
+  const activeTabId = useEditorStore((s) => s.activeTabId)
+  const tabs = useEditorStore((s) => s.tabs)
+
+  const isModuleTab = useMemo(() => {
+    const tab = tabs.find((t) => t.id === activeTabId)
+    return tab?.isModule ?? false
+  }, [tabs, activeTabId])
+
   const onDragStart = useCallback((event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow-nodetype', nodeType)
     event.dataTransfer.effectAllowed = 'move'
@@ -21,7 +33,11 @@ export function NodePalette() {
 
   const grouped = CATEGORY_ORDER.map((cat) => ({
     category: cat,
-    items: PALETTE_ITEMS.filter((item) => item.category === cat),
+    items: PALETTE_ITEMS.filter((item) => {
+      if (item.category !== cat) return false
+      if (MODULE_ONLY_TYPES.has(item.type) && !isModuleTab) return false
+      return true
+    }),
   }))
 
   return (

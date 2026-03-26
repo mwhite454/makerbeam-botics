@@ -113,6 +113,22 @@ export function BaseNode({
 
 // ─── Shared form widgets ──────────────────────────────────────────────────────
 
+// Expr = a raw number OR a freeform OpenSCAD expression string
+export type Expr = number | string
+
+function isExpr(v: Expr): boolean {
+  if (typeof v === 'string') {
+    const trimmed = v.trim()
+    return trimmed !== '' && isNaN(Number(trimmed))
+  }
+  return false
+}
+
+function parseExprChange(raw: string): Expr {
+  const n = Number(raw)
+  return raw.trim() === '' ? 0 : isNaN(n) ? raw : n
+}
+
 interface NumberInputProps {
   label: string
   value: number
@@ -136,6 +152,73 @@ export function NumberInput({ label, value, min, max, step = 1, onChange }: Numb
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
       />
     </label>
+  )
+}
+
+// ─── Expression-capable inputs ──────────────────────────────────────────────
+
+interface ExpressionInputProps {
+  label: string
+  value: Expr
+  step?: number
+  onChange: (v: Expr) => void
+}
+
+export function ExpressionInput({ label, value, step = 1, onChange }: ExpressionInputProps) {
+  const expr = isExpr(value)
+  return (
+    <label className="flex items-center justify-between gap-2 text-xs text-gray-300 py-0.5">
+      <span className="shrink-0 text-gray-400 min-w-[50px]">{label}</span>
+      <input
+        type="text"
+        className={`w-[72px] bg-gray-800 border rounded px-1.5 py-1 text-xs text-white focus:outline-none nodrag ${
+          expr ? 'border-amber-500/60 text-amber-200 focus:border-amber-400' : 'border-gray-700 focus:border-blue-500'
+        }`}
+        value={String(value)}
+        step={step}
+        onChange={(e) => onChange(parseExprChange(e.target.value))}
+        title={expr ? 'Expression mode' : 'Number (type an expression like i*10 for expression mode)'}
+      />
+    </label>
+  )
+}
+
+interface ExpressionVectorInputProps {
+  label: string
+  value: [Expr, Expr, Expr]
+  step?: number
+  onChange: (v: [Expr, Expr, Expr]) => void
+}
+
+export function ExpressionVectorInput({ label, value, step = 1, onChange }: ExpressionVectorInputProps) {
+  return (
+    <div className="text-xs text-gray-300 space-y-1">
+      <span className="text-gray-400 text-[10px]">{label}</span>
+      <div className="flex gap-1.5">
+        {(['x', 'y', 'z'] as const).map((axis, i) => {
+          const expr = isExpr(value[i])
+          return (
+            <label key={axis} className="flex flex-col items-center gap-0.5">
+              <span className="text-[9px] text-gray-500 uppercase font-medium">{axis}</span>
+              <input
+                type="text"
+                className={`w-[52px] bg-gray-800 border rounded px-1 py-1 text-xs text-white text-center focus:outline-none nodrag ${
+                  expr ? 'border-amber-500/60 text-amber-200 focus:border-amber-400' : 'border-gray-700 focus:border-blue-500'
+                }`}
+                value={String(value[i])}
+                step={step}
+                onChange={(e) => {
+                  const next = [...value] as [Expr, Expr, Expr]
+                  next[i] = parseExprChange(e.target.value)
+                  onChange(next)
+                }}
+                title={expr ? 'Expression mode' : 'Number or expression'}
+              />
+            </label>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

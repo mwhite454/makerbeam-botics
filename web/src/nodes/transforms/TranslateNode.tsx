@@ -1,5 +1,5 @@
 import { type NodeProps } from '@xyflow/react'
-import { BaseNode, VectorInput } from '../BaseNode'
+import { BaseNode, ExpressionVectorInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
 import type { TranslateData } from '@/types/nodes'
 
@@ -9,7 +9,7 @@ export function TranslateNode({ id, data, selected }: NodeProps) {
   return (
     <BaseNode id={id} category="transform" label="translate" selected={selected}
       inputHandles={[{ id: 'in-0', label: 'child' }]}>
-      <VectorInput label="xyz" value={[d.x, d.y, d.z]} step={1}
+      <ExpressionVectorInput label="xyz" value={[d.x, d.y, d.z]} step={1}
         onChange={([x, y, z]) => update(id, { x, y, z })} />
     </BaseNode>
   )

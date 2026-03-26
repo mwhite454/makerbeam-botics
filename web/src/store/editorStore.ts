@@ -13,7 +13,7 @@ import {
 import { AllNodeData } from '@/types/nodes'
 
 export type RenderStatus = 'idle' | 'rendering' | 'done' | 'error'
-export type PreviewMode  = 'stl' | 'png'
+export type PreviewMode  = 'off' | 'stl' | 'png'
 
 // ─── Tab/Module support ───────────────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ interface EditorState {
   // ── Tab system ──────────────────────────────────────────────────────────────
   tabs: EditorTab[]
   activeTabId: string
-  addTab: (label: string, isModule: boolean) => void
+  addTab: (label: string, isModule: boolean) => string
   removeTab: (id: string) => void
   renameTab: (id: string, label: string) => void
   setActiveTab: (id: string) => void
@@ -62,11 +62,13 @@ interface EditorState {
   // ── Render state ────────────────────────────────────────────────────────────
   renderResultSTL: ArrayBuffer | null
   renderResultPNG: Uint8Array | null
+  renderResultOFF: ArrayBuffer | null
   renderStatus: RenderStatus
   renderError: string | null
   renderLogs: string | null
   setRenderResultSTL: (buf: ArrayBuffer) => void
   setRenderResultPNG: (bytes: Uint8Array) => void
+  setRenderResultOFF: (buf: ArrayBuffer) => void
   setRenderStatus: (s: RenderStatus) => void
   setRenderError: (msg: string, logs?: string) => void
 
@@ -74,12 +76,10 @@ interface EditorState {
   codePanelOpen: boolean
   previewMode: PreviewMode
   autoRender: boolean
-  autoColorPreview: boolean
   toggleCodePanel: () => void
   setCodePanelOpen: (open: boolean) => void
   setPreviewMode: (m: PreviewMode) => void
   setAutoRender: (v: boolean) => void
-  setAutoColorPreview: (v: boolean) => void
 
   // ── Save/load ───────────────────────────────────────────────────────────────
   exportProject: () => string
@@ -100,14 +100,22 @@ export const useEditorStore = create<EditorState>()(
       tabs: [DEFAULT_TAB],
       activeTabId: 'main',
 
-      addTab: (label, isModule) =>
+      addTab: (label, isModule) => {
+        const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
         set((state) => {
-          const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+          // Save current tab's nodes/edges before switching
+          const current = getActiveTab(state)
+          if (current) {
+            current.nodes = state.nodes as Node[]
+            current.edges = state.edges as Edge[]
+          }
           state.tabs.push(createTab(id, label, isModule))
           state.activeTabId = id
           state.nodes = []
           state.edges = []
-        }),
+        })
+        return id
+      },
 
       removeTab: (id) =>
         set((state) => {
@@ -128,9 +136,29 @@ export const useEditorStore = create<EditorState>()(
         set((state) => {
           const tab = state.tabs.find((t) => t.id === id)
           if (tab) {
+            const oldModuleName = tab.moduleName
             tab.label = label
             if (tab.isModule) {
-              tab.moduleName = label.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+              const newModuleName = label.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+              tab.moduleName = newModuleName
+
+              // Propagate rename to all module_call nodes across all tabs
+              if (oldModuleName && oldModuleName !== newModuleName) {
+                // Update module_call nodes in saved tab data
+                for (const t of state.tabs) {
+                  for (const node of t.nodes) {
+                    if (node.type === 'module_call' && (node.data as Record<string, unknown>).moduleName === oldModuleName) {
+                      ;(node.data as Record<string, unknown>).moduleName = newModuleName
+                    }
+                  }
+                }
+                // Also update any module_call nodes in the live nodes array (active tab)
+                for (const node of state.nodes) {
+                  if (node.type === 'module_call' && (node.data as Record<string, unknown>).moduleName === oldModuleName) {
+                    ;(node.data as Record<string, unknown>).moduleName = newModuleName
+                  }
+                }
+              }
             }
           }
         }),
@@ -189,6 +217,7 @@ export const useEditorStore = create<EditorState>()(
       // ── Render state ────────────────────────────────────────────────────────
       renderResultSTL: null,
       renderResultPNG: null,
+      renderResultOFF: null,
       renderStatus: 'idle',
       renderError: null,
       renderLogs: null,
@@ -209,6 +238,14 @@ export const useEditorStore = create<EditorState>()(
           state.renderLogs = null
         }),
 
+      setRenderResultOFF: (buf) =>
+        set((state) => {
+          state.renderResultOFF = buf
+          state.renderStatus = 'done'
+          state.renderError = null
+          state.renderLogs = null
+        }),
+
       setRenderStatus: (s) => set((state) => { state.renderStatus = s }),
 
       setRenderError: (msg, logs) =>
@@ -220,15 +257,13 @@ export const useEditorStore = create<EditorState>()(
 
       // ── UI state ────────────────────────────────────────────────────────────
       codePanelOpen: true,
-      previewMode: 'png',
+      previewMode: 'off',
       autoRender: true,
-      autoColorPreview: true,
 
       toggleCodePanel: () => set((state) => { state.codePanelOpen = !state.codePanelOpen }),
       setCodePanelOpen: (open) => set((state) => { state.codePanelOpen = open }),
       setPreviewMode: (m) => set((state) => { state.previewMode = m }),
       setAutoRender: (v) => set((state) => { state.autoRender = v }),
-      setAutoColorPreview: (v) => set((state) => { state.autoColorPreview = v }),
 
       // ── Save / load ─────────────────────────────────────────────────────────
       exportProject: () => {

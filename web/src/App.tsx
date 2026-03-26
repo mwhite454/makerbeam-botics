@@ -9,6 +9,7 @@ import { CodePanel }    from './components/panels/CodePanel'
 import { TabBar }       from './components/panels/TabBar'
 import { useCodegen }   from './hooks/useCodegen'
 import { useAutoRender } from './hooks/useAutoRender'
+import { useAutoSave, loadSavedProject } from './hooks/useAutoSave'
 import { useEditorStore } from './store/editorStore'
 
 function CollapsedSideLabel({ label, onClick }: { label: string; onClick: () => void }) {

@@ -118,7 +118,8 @@ function emitNode(
       case 'parameter_node':
       case 'parameter_list':
       case 'var_node':
-        return asIdentifier(valueData.varName)
+      case 'module_arg':
+        return asIdentifier(valueData.varName ?? valueData.argName)
       default:
         return fallback
     }
@@ -346,8 +347,21 @@ function emitNode(
 
     case 'var_node': {
       const vName = d.varName || 'x'
-      const vValue = d.value ?? 0
-      result = `${pad}${vName} = ${vValue};\n`
+      const vValue = d.value ?? '0'
+      const vType = (d.dataType as string) || ''
+      let formatted: string
+      switch (vType) {
+        case 'string':
+          formatted = `"${escapeString(vValue)}"`
+          break
+        case 'boolean':
+          formatted = vValue === 'true' ? 'true' : 'false'
+          break
+        default:
+          formatted = String(vValue)
+          break
+      }
+      result = `${pad}${vName} = ${formatted};\n`
       break
     }
 
@@ -365,19 +379,61 @@ function emitNode(
       break
     }
 
+    case 'module_arg': {
+      // Module args are emitted in the module signature, not as body statements
+      result = ''
+      break
+    }
+
     case 'module_call': {
       const moduleName = (d.moduleName || '').toString().trim()
-      const args = (d.args || '').toString().trim()
+      const argValues = (d.argValues as Record<string, string> | undefined) ?? {}
+      const legacyArgs = (d.args || '').toString().trim()
       if (!moduleName) {
         result = `${pad}// module_call: no module selected\n`
         break
       }
 
-      const callHead = `${moduleName}(${args})`
-      if (children.length === 0) {
-        result = `${pad}${callHead};\n`
+      // Build structured args: check connected handles first (start at index 1, 0 is children)
+      const argParts: string[] = []
+      const argNames = Object.keys(argValues)
+      for (let ai = 0; ai < argNames.length; ai++) {
+        const aName = argNames[ai]
+        const handleIdx = ai + 1 // handle 0 is children
+        const connected = resolveValueInput(handleIdx, '')
+        if (connected) {
+          argParts.push(`${aName} = ${connected}`)
+        } else if (argValues[aName] !== undefined && argValues[aName] !== '') {
+          argParts.push(`${aName} = ${argValues[aName]}`)
+        }
+      }
+
+      // Fall back to legacy freeform args string if no structured args
+      const argsStr = argParts.length > 0 ? argParts.join(', ') : legacyArgs
+      const callHead = `${moduleName}(${argsStr})`
+      if (children.length === 0 || (children.length === 1 && children[0].handleIndex > 0 && argNames.length > 0)) {
+        // No geometry children connected (handle 0 not used)
+        const geomChildren = children.filter(c => c.handleIndex === 0)
+        if (geomChildren.length === 0) {
+          result = `${pad}${callHead};\n`
+        } else {
+          result = `${pad}${callHead} {\n`
+          for (const gc of geomChildren) {
+            result += emitNode(gc.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
+          }
+          result += `${pad}}\n`
+        }
       } else {
-        result = `${pad}${callHead} {\n${getAllChildren()}${pad}}\n`
+        const geomChildren = children.filter(c => c.handleIndex === 0)
+        if (geomChildren.length === 0) {
+          result = `${pad}${callHead};\n`
+        } else {
+          result = `${pad}${callHead} {\n`
+          for (const gc of geomChildren) {
+            result += emitNode(gc.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
+          }
+          result += `${pad}}\n`
+        }
       }
       break
     }
@@ -447,13 +503,40 @@ export function generateCode(nodes: Node[], edges: Edge[]): string {
 // ─── Module code generation (for tab system) ──────────────────────────────────
 
 export function generateModuleCode(moduleName: string, nodes: Node[], edges: Edge[]): string {
-  if (nodes.length === 0) return `module ${moduleName}() {\n  // Empty module\n}\n`
+  // Extract module_arg nodes for the signature
+  const argNodes = nodes.filter((n) => n.type === 'module_arg')
+  const argParts = argNodes.map((n) => {
+    const d = n.data as Record<string, unknown>
+    const name = String(d.argName || 'param').replace(/[^a-zA-Z0-9_]/g, '_')
+    const defaultVal = String(d.defaultValue ?? '0')
+    const dataType = String(d.dataType || 'number')
+    let formatted: string
+    switch (dataType) {
+      case 'string':
+        formatted = `"${defaultVal.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+        break
+      case 'boolean':
+        formatted = defaultVal === 'true' ? 'true' : 'false'
+        break
+      default:
+        formatted = defaultVal
+        break
+    }
+    return `${name} = ${formatted}`
+  })
+  const signature = `module ${moduleName}(${argParts.join(', ')})`
 
-  const innerCode = generateCode(nodes, edges)
+  if (nodes.length === 0) return `${signature} {\n  // Empty module\n}\n`
+
+  // Filter out module_arg nodes from body generation (they go in signature)
+  const bodyNodes = nodes.filter((n) => n.type !== 'module_arg')
+  if (bodyNodes.length === 0) return `${signature} {\n  // Empty module\n}\n`
+
+  const innerCode = generateCode(bodyNodes, edges)
   const indented = innerCode
     .split('\n')
     .map((line) => (line.trim() ? '  ' + line : line))
     .join('\n')
 
-  return `module ${moduleName}() {\n${indented}}\n`
+  return `${signature} {\n${indented}}\n`
 }

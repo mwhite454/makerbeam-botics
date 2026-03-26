@@ -36,6 +36,7 @@ import { IntersectionForNode } from './control/IntersectionForNode'
 import { AssertNode }       from './control/AssertNode'
 import { ParameterNode, ParameterListNode } from './control/ParameterNode'
 import { ModuleCallNode }   from './control/ModuleCallNode'
+import { ModuleArgNode }    from './control/ModuleArgNode'
 
 import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
 import { SurfaceNode }      from './import_nodes/SurfaceNode'
@@ -90,6 +91,7 @@ export const nodeTypes: NodeTypes = {
   parameter_node:   ParameterNode,
   parameter_list:   ParameterListNode,
   module_call:      ModuleCallNode,
+  module_arg:       ModuleArgNode,
 
   // Import
   import_stl:       ImportSTLNode,

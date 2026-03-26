@@ -7,43 +7,37 @@ const DEBOUNCE_MS = 900
 export function useAutoRender() {
   const generatedCode   = useEditorStore((s) => s.generatedCode)
   const autoRender      = useEditorStore((s) => s.autoRender)
-  const autoColorPreview = useEditorStore((s) => s.autoColorPreview)
   const previewMode     = useEditorStore((s) => s.previewMode)
   const setPreviewMode  = useEditorStore((s) => s.setPreviewMode)
   const setRenderStatus = useEditorStore((s) => s.setRenderStatus)
   const setRenderError  = useEditorStore((s) => s.setRenderError)
   const setRenderResultSTL = useEditorStore((s) => s.setRenderResultSTL)
   const setRenderResultPNG = useEditorStore((s) => s.setRenderResultPNG)
+  const setRenderResultOFF = useEditorStore((s) => s.setRenderResultOFF)
 
   const { render, wasmStatus } = useOpenSCAD()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pngUnavailableRef = useRef(false)
-  const hasColorHints = /\bcolor\s*\(/.test(generatedCode)
 
-  useEffect(() => {
-    if (!autoColorPreview) return
-    if (pngUnavailableRef.current) return
-    if (previewMode === 'stl' && hasColorHints) {
-      setPreviewMode('png')
-    }
-  }, [autoColorPreview, previewMode, hasColorHints, setPreviewMode])
-
-  const doRender = useCallback(async (code: string, mode: 'stl' | 'png') => {
-    if (!code.trim() || code.startsWith('// Add nodes')) return
+  const doRender = useCallback(async (code: string, mode: typeof previewMode) => {
+    if (!code.trim() || code.includes('// Add nodes')) return
     if (wasmStatus !== 'ready') return
 
-    const effectiveMode: 'stl' | 'png' = mode === 'png' && pngUnavailableRef.current ? 'stl' : mode
+    // PNG fallback to STL if environment doesn't support it
+    let effectiveMode = mode
+    if (mode === 'png' && pngUnavailableRef.current) effectiveMode = 'stl'
 
     setRenderStatus('rendering')
     try {
       const data = await render(code, effectiveMode)
       if (effectiveMode === 'stl') {
         setRenderResultSTL(data)
-      } else {
+      } else if (effectiveMode === 'png') {
         setRenderResultPNG(new Uint8Array(data))
+      } else {
+        setRenderResultOFF(data)
       }
     } catch (err) {
-      // err is a RenderError { message, logs } from the worker
       const renderErr = err as RenderError
 
       const combined = `${renderErr.message || ''}\n${renderErr.logs || ''}`.toLowerCase()
@@ -69,9 +63,21 @@ export function useAutoRender() {
         }
       }
 
+      // If OFF format failed, fall back to STL
+      if (effectiveMode === 'off') {
+        try {
+          const stlData = await render(code, 'stl')
+          setPreviewMode('stl')
+          setRenderResultSTL(stlData)
+          return
+        } catch {
+          // Fall through to generic error
+        }
+      }
+
       setRenderError(renderErr.message || String(err), renderErr.logs || '')
     }
-  }, [render, wasmStatus, setRenderStatus, setRenderResultSTL, setRenderResultPNG, setRenderError])
+  }, [render, wasmStatus, setRenderStatus, setRenderResultSTL, setRenderResultPNG, setRenderResultOFF, setRenderError, setPreviewMode])
 
   // Auto-render on code change
   useEffect(() => {

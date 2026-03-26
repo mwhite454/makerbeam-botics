@@ -7,13 +7,15 @@
 import { createOpenSCAD } from 'openscad-wasm'
 import type { OpenSCAD } from 'openscad-wasm'
 
+export type RenderFormat = 'stl' | 'png' | 'off'
+
 export type WorkerRequest =
-  | { type: 'render'; id: string; code: string; format: 'stl' | 'png' }
+  | { type: 'render'; id: string; code: string; format: RenderFormat }
   | { type: 'ping' }
 
 export type WorkerResponse =
   | { type: 'ready' }
-  | { type: 'result'; id: string; format: 'stl' | 'png'; data: ArrayBuffer }
+  | { type: 'result'; id: string; format: RenderFormat; data: ArrayBuffer }
   | { type: 'error';  id: string; message: string; logs: string }
   | { type: 'pong' }
 
@@ -58,7 +60,7 @@ function handleRequest(req: WorkerRequest) {
   }
 }
 
-async function runRender(id: string, code: string, format: 'stl' | 'png') {
+async function runRender(id: string, code: string, format: RenderFormat) {
   const stdout: string[] = []
   const stderr: string[] = []
 
@@ -82,14 +84,16 @@ async function runRender(id: string, code: string, format: 'stl' | 'png') {
   }
 
   const inputPath = '/input.scad'
-  const outputExt = format === 'stl' ? '.stl' : '.png'
-  const outputPath = `/output${outputExt}`
+  const extMap: Record<RenderFormat, string> = { stl: '.stl', png: '.png', off: '.off' }
+  const outputPath = `/output${extMap[format]}`
 
   try {
     raw.FS.writeFile(inputPath, code)
 
     const args: string[] = [inputPath, '-o', outputPath]
-    if (format === 'png') {
+    if (format === 'off') {
+      args.push('--export-format=off')
+    } else if (format === 'png') {
       args.push('--render', '--imgsize=800,600')
     }
 
@@ -126,6 +130,19 @@ async function runRender(id: string, code: string, format: 'stl' | 'png') {
       }
       self.postMessage(msg)
       return
+    }
+
+    // Debug: log OFF output header + sample face data
+    if (format === 'off') {
+      const fullText = new TextDecoder().decode(data)
+      const preview = fullText.slice(0, 200)
+      // Find and log a few face lines (after vertices)
+      const allLines = fullText.split('\n')
+      const headerMatch = allLines[0]?.match(/^(C?N?OFF)\s*(\d+)\s+(\d+)/)
+      const numVerts = headerMatch ? parseInt(headerMatch[2]) : 0
+      const faceStart = numVerts + (headerMatch ? 1 : 2) // header line + vertex lines
+      const sampleFaces = allLines.slice(faceStart, faceStart + 3).join(' | ')
+      console.log(`[openscad-worker] OFF output (${data.length} bytes): header="${preview.split('\n')[0]}", sample faces: [${sampleFaces}]`)
     }
 
     if (data.length === 0) {
