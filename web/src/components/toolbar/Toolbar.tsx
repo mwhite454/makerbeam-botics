@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useEditorStore } from '@/store/editorStore'
 import { useOpenSCAD }    from '@/wasm/useOpenSCAD'
+import { clearSavedProject } from '@/hooks/useAutoSave'
 import type { WasmStatus } from '@/wasm/useOpenSCAD'
 
 interface ToolbarProps {
@@ -29,8 +30,8 @@ function WasmIndicator({ status }: { status: WasmStatus }) {
 export function Toolbar({ onRender }: ToolbarProps) {
   const { wasmStatus } = useOpenSCAD()
   const {
-    renderStatus, previewMode, autoRender, autoColorPreview, codePanelOpen,
-    setPreviewMode, setAutoRender, setAutoColorPreview, toggleCodePanel,
+    renderStatus, previewMode, autoRender, codePanelOpen,
+    setPreviewMode, setAutoRender, toggleCodePanel,
     exportProject, importProject,
   } = useEditorStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -77,6 +78,18 @@ export function Toolbar({ onRender }: ToolbarProps) {
       {/* Separator */}
       <div className="w-px h-5 bg-gray-700" />
 
+      {/* Sketch Mode link */}
+      <a
+        href="/sketch"
+        className="text-[11px] text-pink-400 hover:text-pink-300 transition-colors px-2 py-1 rounded hover:bg-gray-800 font-medium"
+        title="Open 2D Sketch Editor"
+      >
+        Sketch →
+      </a>
+
+      {/* Separator */}
+      <div className="w-px h-5 bg-gray-700" />
+
       {/* Save/Load */}
       <button
         className="text-[11px] text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"
@@ -113,16 +126,6 @@ export function Toolbar({ onRender }: ToolbarProps) {
         Auto-render
       </label>
 
-      <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer">
-        <input
-          type="checkbox"
-          className="accent-blue-500"
-          checked={autoColorPreview}
-          onChange={(e) => setAutoColorPreview(e.target.checked)}
-        />
-        Color preview
-      </label>
-
       {/* Manual render button */}
       <button
         className={`
@@ -139,13 +142,13 @@ export function Toolbar({ onRender }: ToolbarProps) {
 
       {/* Preview mode */}
       <div className="flex rounded overflow-hidden border border-white/10 text-[11px]">
-        {(['stl', 'png'] as const).map((mode) => (
+        {([['off', '3D'], ['stl', 'STL'], ['png', 'PNG']] as const).map(([mode, label]) => (
           <button
             key={mode}
             className={`px-2 py-1 transition-colors ${previewMode === mode ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
             onClick={() => setPreviewMode(mode)}
           >
-            {mode.toUpperCase()}
+            {label}
           </button>
         ))}
       </div>

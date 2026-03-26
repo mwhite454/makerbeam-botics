@@ -9,12 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "@types/react-color": "^3.0.13",
     "@xyflow/react": "^12.3.6",
     "immer": "^10.1.1",
+    "makerjs": "^0.19.2",
     "openscad-wasm": "^0.0.4",
     "react-color": "^2.19.3",
     "react-resizable-panels": "^4.7.6",
+    "react-router-dom": "^7.13.2",
     "three": "^0.172.0",
     "zustand": "^5.0.3"
   },
