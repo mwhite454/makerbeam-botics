@@ -8,7 +8,7 @@ export function OffsetNode({ id, data, selected }: NodeProps) {
   const update = useEditorStore((s) => s.updateNodeData)
   return (
     <BaseNode id={id} category="transform" label="offset" selected={selected}
-      inputHandles={[{ id: 'in-0', label: 'child' }]}>
+      inputHandles={[{ id: 'in-0', label: 'child' }, { id: 'in-1', label: 'r' }, { id: 'in-2', label: 'delta' }, { id: 'in-3', label: 'chamfer' }]}>
       <CheckboxInput label="use r" value={d.useR} onChange={(v) => update(id, { useR: v })} />
       {d.useR
         ? <ExpressionInput label="r" value={d.r} step={0.5} onChange={(v) => update(id, { r: v })} />

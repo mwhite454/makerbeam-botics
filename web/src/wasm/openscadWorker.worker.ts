@@ -101,17 +101,17 @@ async function runRender(id: string, code: string, format: RenderFormat) {
 
     const allLogs = [...stdout, ...stderr].join('\n')
 
-    const hasError = stderr.some(line =>
-      line.includes('ERROR:') || line.includes('FATAL:')
-    )
+    const hasError = stderr.some((line) => /\berror\b|\bfatal\b/i.test(line))
 
     if (exitCode !== 0 || hasError) {
-      const errorLines = stderr.filter(l =>
-        l.includes('ERROR:') || l.includes('WARNING:') || l.includes('FATAL:') || l.includes('line ')
+      const errorLines = stderr.filter((line) =>
+        /\berror\b|\bwarning\b|\bfatal\b|\bline\s+\d+\b/i.test(line)
       )
       const summary = errorLines.length > 0
         ? errorLines.join('\n')
-        : `OpenSCAD exited with code ${exitCode}`
+        : stderr.length > 0
+          ? stderr.slice(-8).join('\n')
+          : `OpenSCAD exited with code ${exitCode}`
 
       const msg: WorkerResponse = { type: 'error', id, message: summary, logs: allLogs }
       self.postMessage(msg)

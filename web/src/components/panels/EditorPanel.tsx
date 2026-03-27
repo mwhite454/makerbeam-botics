@@ -14,6 +14,7 @@ import { useEditorStore }    from '@/store/editorStore'
 import { nodeTypes }         from '@/nodes'
 import { PALETTE_ITEMS }     from '@/types/nodes'
 import { DeletableEdge }     from '@/components/DeletableEdge'
+import { SearchBar }         from '@/components/SearchBar'
 
 const edgeTypes = { default: DeletableEdge }
 
@@ -21,6 +22,8 @@ let nodeIdCounter = 1
 
 export function EditorPanel() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useEditorStore()
+  const updateNodeData = useEditorStore((s) => s.updateNodeData)
+  const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes)
   const rfInstance = useRef<ReactFlowInstance | null>(null)
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -54,7 +57,7 @@ export function EditorPanel() {
     [addNode]
   )
 
-  // Keyboard handler for node/edge deletion
+  // Keyboard handler for node/edge deletion and grouping
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Delete' || event.key === 'Backspace') {
       // Don't delete if an input is focused
@@ -64,10 +67,20 @@ export function EditorPanel() {
       }
       // ReactFlow handles this via onNodesChange/onEdgesChange with remove changes
     }
-  }, [])
+    // Ctrl+G: group selected nodes
+    if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
+      event.preventDefault()
+      groupSelectedNodes()
+    }
+  }, [groupSelectedNodes])
 
   return (
     <div className="flex-1 relative bg-gray-950">
+      <SearchBar
+        nodes={nodes}
+        updateNodeData={updateNodeData as (id: string, data: Record<string, unknown>) => void}
+        rfInstance={rfInstance}
+      />
       <ReactFlow
         nodes={nodes}
         edges={edges}

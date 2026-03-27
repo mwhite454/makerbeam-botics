@@ -16,6 +16,7 @@ export function CubeNode({ id, data, selected }: NodeProps) {
         { id: 'in-0', label: 'x' },
         { id: 'in-1', label: 'y' },
         { id: 'in-2', label: 'z' },
+        { id: 'in-3', label: 'center' },
       ]}
     >
       <VectorInput label="size" value={[d.x, d.y, d.z]} step={0.5}

@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import { NodeCategory, CATEGORY_COLORS, CATEGORY_TEXT } from '@/types/nodes'
+import { NodeMetaFields } from '@/components/NodeMetaFields'
+import { useEditorStore } from '@/store/editorStore'
 
 interface HandleConfig {
   id: string
@@ -29,6 +31,12 @@ export function BaseNode({
   const headerColor = CATEGORY_COLORS[category]
   const textColor   = CATEGORY_TEXT[category]
   const { deleteElements } = useReactFlow()
+  const updateNodeData = useEditorStore((s) => s.updateNodeData)
+
+  // Read meta fields individually to avoid creating new object references (prevents infinite re-render)
+  const nodeName = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeName as string | undefined)
+  const nodeTags = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeTags as string[] | undefined)
+  const searchMatch = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?._searchMatch as boolean | undefined)
 
   const onDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -46,16 +54,18 @@ export function BaseNode({
     <div
       className={`
         rounded-lg shadow-xl border transition-all
-        ${selected
-          ? 'border-white/60 shadow-white/20 ring-1 ring-blue-400/50'
-          : 'border-white/10 shadow-black/40'}
+        ${searchMatch
+          ? 'border-yellow-400 shadow-yellow-400/30 ring-2 ring-yellow-400/60'
+          : selected
+            ? 'border-white/60 shadow-white/20 ring-1 ring-blue-400/50'
+            : 'border-white/10 shadow-black/40'}
         bg-gray-900/95 backdrop-blur-sm
       `}
       style={{ minWidth: 210 }}
     >
       {/* Header */}
       <div className={`${headerColor} ${textColor} px-3 py-1.5 text-xs font-bold tracking-wide uppercase select-none rounded-t-lg flex items-center justify-between`}>
-        <span>{label}</span>
+        <span>{nodeName || label}</span>
         <button
           onClick={onDelete}
           className="ml-2 opacity-50 hover:opacity-100 transition-opacity text-sm leading-none nodrag nopan"
@@ -65,8 +75,19 @@ export function BaseNode({
         </button>
       </div>
 
+      {/* Name / Tags */}
+      <div className="px-3 pt-1">
+        <NodeMetaFields
+          id={id}
+          nodeName={nodeName}
+          nodeTags={nodeTags}
+          updateNodeData={updateNodeData as (id: string, data: Record<string, unknown>) => void}
+          accentColor="blue"
+        />
+      </div>
+
       {/* Body */}
-      <div className="px-4 pt-3.5 pb-6 space-y-3 relative" style={{ minHeight: bodyMinHeight }}>
+      <div className="px-4 pt-2 pb-6 space-y-3 relative" style={{ minHeight: bodyMinHeight }}>
         {/* Input handles — positioned in the body area */}
         {inputHandles.map((handle, i) => {
           const topOffset = inputHandles.length === 1
@@ -165,20 +186,85 @@ interface ExpressionInputProps {
 }
 
 export function ExpressionInput({ label, value, step = 1, onChange }: ExpressionInputProps) {
+  const globalParameters = useEditorStore((s) => s.globalParameters)
   const expr = isExpr(value)
+  const inputStr = String(value)
+
+  const [open, setOpen] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(-1)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const suggestions = useMemo(() => {
+    if (!inputStr.trim()) return globalParameters
+    const lower = inputStr.toLowerCase()
+    return globalParameters.filter((p) => p.name.toLowerCase().includes(lower))
+  }, [inputStr, globalParameters])
+
+  const applySuggestion = (name: string) => {
+    onChange(name)
+    setOpen(false)
+    setActiveIdx(-1)
+  }
+
+  const handleFocus = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    if (globalParameters.length > 0) setOpen(true)
+  }
+
+  const handleBlur = () => {
+    hideTimer.current = setTimeout(() => setOpen(false), 150)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open || suggestions.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIdx((i) => Math.min(i + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIdx((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter' && activeIdx >= 0) {
+      e.preventDefault()
+      applySuggestion(suggestions[activeIdx].name)
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+    }
+  }
+
   return (
-    <label className="flex items-center justify-between gap-2 text-xs text-gray-300 py-0.5">
+    <label className="flex items-center justify-between gap-2 text-xs text-gray-300 py-0.5 relative">
       <span className="shrink-0 text-gray-400 min-w-[50px]">{label}</span>
-      <input
-        type="text"
-        className={`w-[72px] bg-gray-800 border rounded px-1.5 py-1 text-xs text-white focus:outline-none nodrag ${
-          expr ? 'border-amber-500/60 text-amber-200 focus:border-amber-400' : 'border-gray-700 focus:border-blue-500'
-        }`}
-        value={String(value)}
-        step={step}
-        onChange={(e) => onChange(parseExprChange(e.target.value))}
-        title={expr ? 'Expression mode' : 'Number (type an expression like i*10 for expression mode)'}
-      />
+      <div className="relative">
+        <input
+          type="text"
+          className={`w-[72px] bg-gray-800 border rounded px-1.5 py-1 text-xs text-white focus:outline-none nodrag ${
+            expr ? 'border-amber-500/60 text-amber-200 focus:border-amber-400' : 'border-gray-700 focus:border-blue-500'
+          }`}
+          value={inputStr}
+          step={step}
+          onChange={(e) => { onChange(parseExprChange(e.target.value)); setActiveIdx(-1) }}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          title={expr ? 'Expression mode' : 'Number (type an expression for expression mode)'}
+        />
+        {open && suggestions.length > 0 && (
+          <div className="absolute left-0 top-full mt-0.5 z-50 bg-gray-800 border border-gray-600 rounded shadow-xl min-w-[120px] max-h-40 overflow-y-auto nodrag nopan">
+            {suggestions.map((p, i) => (
+              <div
+                key={p.id}
+                className={`px-2 py-1 text-[11px] cursor-pointer font-mono flex items-center justify-between gap-2 ${
+                  i === activeIdx ? 'bg-blue-600 text-white' : 'text-green-300 hover:bg-gray-700'
+                }`}
+                onMouseDown={(e) => { e.preventDefault(); applySuggestion(p.name) }}
+              >
+                <span>{p.name}</span>
+                <span className={`text-[9px] ${i === activeIdx ? 'text-blue-200' : 'text-gray-500'}`}>{p.dataType}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </label>
   )
 }

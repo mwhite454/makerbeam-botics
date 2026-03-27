@@ -8,7 +8,13 @@ export function SketchNgonNode({ id, data, selected }: NodeProps) {
   const update = useSketchStore((s) => s.updateNodeData)
 
   return (
-    <SketchBaseNode id={id} category="sketch_primitive" label="n-gon" selected={selected}>
+    <SketchBaseNode
+      id={id}
+      category="sketch_primitive"
+      label="n-gon"
+      selected={selected}
+      inputHandles={[{ id: 'in-0', label: 'sides' }, { id: 'in-1', label: 'r' }]}
+    >
       <NumberInput label="sides" value={d.sides} step={1} min={3} onChange={(v) => update(id, { sides: Math.max(3, Math.round(v)) })} />
       <NumberInput label="radius" value={d.radius} step={1} min={0} onChange={(v) => update(id, { radius: v })} />
       <CheckboxInput label="inscribed" value={d.inscribed} onChange={(v) => update(id, { inscribed: v })} />

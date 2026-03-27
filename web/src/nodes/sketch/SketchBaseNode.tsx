@@ -1,6 +1,8 @@
 import React from 'react'
 import { Handle, Position, useReactFlow } from '@xyflow/react'
 import { type SketchNodeCategory, SKETCH_CATEGORY_COLORS, SKETCH_CATEGORY_TEXT } from '@/types/sketchNodes'
+import { NodeMetaFields } from '@/components/NodeMetaFields'
+import { useSketchStore } from '@/store/sketchStore'
 
 interface HandleConfig {
   id: string
@@ -29,6 +31,12 @@ export function SketchBaseNode({
   const headerColor = SKETCH_CATEGORY_COLORS[category]
   const textColor   = SKETCH_CATEGORY_TEXT[category]
   const { deleteElements } = useReactFlow()
+  const updateNodeData = useSketchStore((s) => s.updateNodeData)
+
+  // Read meta fields individually to avoid creating new object references (prevents infinite re-render)
+  const nodeName = useSketchStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeName as string | undefined)
+  const nodeTags = useSketchStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeTags as string[] | undefined)
+  const searchMatch = useSketchStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?._searchMatch as boolean | undefined)
 
   const onDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -46,16 +54,18 @@ export function SketchBaseNode({
     <div
       className={`
         rounded-lg shadow-xl border transition-all
-        ${selected
-          ? 'border-white/60 shadow-white/20 ring-1 ring-pink-400/50'
-          : 'border-white/10 shadow-black/40'}
+        ${searchMatch
+          ? 'border-yellow-400 shadow-yellow-400/30 ring-2 ring-yellow-400/60'
+          : selected
+            ? 'border-white/60 shadow-white/20 ring-1 ring-pink-400/50'
+            : 'border-white/10 shadow-black/40'}
         bg-gray-900/95 backdrop-blur-sm
       `}
       style={{ minWidth: 210 }}
     >
       {/* Header */}
       <div className={`${headerColor} ${textColor} px-3 py-1.5 text-xs font-bold tracking-wide uppercase select-none rounded-t-lg flex items-center justify-between`}>
-        <span>{label}</span>
+        <span>{nodeName || label}</span>
         <button
           onClick={onDelete}
           className="ml-2 opacity-50 hover:opacity-100 transition-opacity text-sm leading-none nodrag nopan"
@@ -65,8 +75,19 @@ export function SketchBaseNode({
         </button>
       </div>
 
+      {/* Name / Tags */}
+      <div className="px-3 pt-1">
+        <NodeMetaFields
+          id={id}
+          nodeName={nodeName}
+          nodeTags={nodeTags}
+          updateNodeData={updateNodeData as (id: string, data: Record<string, unknown>) => void}
+          accentColor="pink"
+        />
+      </div>
+
       {/* Body */}
-      <div className="px-4 pt-3.5 pb-6 space-y-3 relative" style={{ minHeight: bodyMinHeight }}>
+      <div className="px-4 pt-2 pb-6 space-y-3 relative" style={{ minHeight: bodyMinHeight }}>
         {/* Input handles */}
         {inputHandles.map((handle, i) => {
           const topOffset = inputHandles.length === 1

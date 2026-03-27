@@ -12,6 +12,7 @@ const SKETCH_CATEGORY_ORDER: SketchNodeCategory[] = [
   'sketch_boolean',
   'sketch_transform',
   'sketch_modifier',
+  'sketch_control',
 ]
 
 export function SketchNodePalette() {

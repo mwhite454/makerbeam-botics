@@ -37,11 +37,13 @@ import { AssertNode }       from './control/AssertNode'
 import { ParameterNode, ParameterListNode } from './control/ParameterNode'
 import { ModuleCallNode }   from './control/ModuleCallNode'
 import { ModuleArgNode }    from './control/ModuleArgNode'
+import { ExpressionNode }   from './control/ExpressionNode'
 
 import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
 import { SurfaceNode }      from './import_nodes/SurfaceNode'
 
 import { MakerBeamNode }    from './makerbeam/MakerBeamNode'
+import { GroupNode }        from './GroupNode'
 
 export const nodeTypes: NodeTypes = {
   // 3D Primitives
@@ -92,6 +94,7 @@ export const nodeTypes: NodeTypes = {
   parameter_list:   ParameterListNode,
   module_call:      ModuleCallNode,
   module_arg:       ModuleArgNode,
+  expression_node:  ExpressionNode,
 
   // Import
   import_stl:       ImportSTLNode,
@@ -99,4 +102,7 @@ export const nodeTypes: NodeTypes = {
 
   // MakerBeam
   makerbeam:        MakerBeamNode,
+
+  // Visual groups (Node Wrangler)
+  group_node:       GroupNode,
 }

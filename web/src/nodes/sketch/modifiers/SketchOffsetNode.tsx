@@ -13,7 +13,7 @@ export function SketchOffsetNode({ id, data, selected }: NodeProps) {
       category="sketch_modifier"
       label="offset"
       selected={selected}
-      inputHandles={[{ id: 'in-0', label: 'shape' }]}
+      inputHandles={[{ id: 'in-0', label: 'shape' }, { id: 'in-1', label: 'dist' }]}
     >
       <NumberInput label="distance" value={d.distance} step={0.5} onChange={(v) => update(id, { distance: v })} />
     </SketchBaseNode>

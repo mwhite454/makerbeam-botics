@@ -18,6 +18,7 @@ export function useAutoRender() {
   const { render, wasmStatus } = useOpenSCAD()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pngUnavailableRef = useRef(false)
+  const renderSeqRef = useRef(0)
 
   const doRender = useCallback(async (code: string, mode: typeof previewMode) => {
     if (!code.trim() || code.includes('// Add nodes')) return
@@ -27,9 +28,13 @@ export function useAutoRender() {
     let effectiveMode = mode
     if (mode === 'png' && pngUnavailableRef.current) effectiveMode = 'stl'
 
+    const requestSeq = ++renderSeqRef.current
+    const isStale = () => requestSeq !== renderSeqRef.current
+
     setRenderStatus('rendering')
     try {
       const data = await render(code, effectiveMode)
+      if (isStale()) return
       if (effectiveMode === 'stl') {
         setRenderResultSTL(data)
       } else if (effectiveMode === 'png') {
@@ -50,10 +55,12 @@ export function useAutoRender() {
         try {
           pngUnavailableRef.current = true
           const stlData = await render(code, 'stl')
+          if (isStale()) return
           setPreviewMode('stl')
           setRenderResultSTL(stlData)
           return
         } catch (stlErr) {
+          if (isStale()) return
           const stlRenderErr = stlErr as RenderError
           setRenderError(
             `PNG preview unavailable in this environment. STL fallback also failed: ${stlRenderErr.message || String(stlErr)}`,
@@ -67,6 +74,7 @@ export function useAutoRender() {
       if (effectiveMode === 'off') {
         try {
           const stlData = await render(code, 'stl')
+          if (isStale()) return
           setPreviewMode('stl')
           setRenderResultSTL(stlData)
           return
@@ -75,6 +83,7 @@ export function useAutoRender() {
         }
       }
 
+      if (isStale()) return
       setRenderError(renderErr.message || String(err), renderErr.logs || '')
     }
   }, [render, wasmStatus, setRenderStatus, setRenderResultSTL, setRenderResultPNG, setRenderResultOFF, setRenderError, setPreviewMode])

@@ -9,6 +9,7 @@ export function useCodegen() {
   const edges           = useEditorStore((s) => s.edges)
   const tabs            = useEditorStore((s) => s.tabs)
   const activeTabId     = useEditorStore((s) => s.activeTabId)
+  const globalParameters = useEditorStore((s) => s.globalParameters)
   const setGeneratedCode = useEditorStore((s) => s.setGeneratedCode)
   const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -37,7 +38,7 @@ export function useCodegen() {
       // Then emit the active tab's top-level code (or the main tab)
       const activeTab = tabs.find((t) => t.id === activeTabId)
       if (activeTab && !activeTab.isModule) {
-        fullCode += generateCode(nodes, edges)
+        fullCode += generateCode(nodes, edges, globalParameters)
       } else if (activeTab && activeTab.isModule) {
         // Add a preview call so OpenSCAD renders the module's geometry
         fullCode += `${activeTab.moduleName}();\n`
@@ -49,5 +50,5 @@ export function useCodegen() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [nodes, edges, tabs, activeTabId, setGeneratedCode])
+  }, [nodes, edges, tabs, activeTabId, globalParameters, setGeneratedCode])
 }

@@ -1,16 +1,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
-import { Toolbar }      from './components/toolbar/Toolbar'
-import { NodePalette }  from './components/toolbar/NodePalette'
-import { EditorPanel }  from './components/panels/EditorPanel'
-import { PreviewPanel } from './components/panels/PreviewPanel'
-import { CodePanel }    from './components/panels/CodePanel'
-import { TabBar }       from './components/panels/TabBar'
-import { useCodegen }   from './hooks/useCodegen'
-import { useAutoRender } from './hooks/useAutoRender'
+import { Toolbar }         from './components/toolbar/Toolbar'
+import { NodePalette }     from './components/toolbar/NodePalette'
+import { EditorPanel }     from './components/panels/EditorPanel'
+import { ParametersPanel } from './components/panels/ParametersPanel'
+import { PreviewPanel }    from './components/panels/PreviewPanel'
+import { CodePanel }       from './components/panels/CodePanel'
+import { TabBar }          from './components/panels/TabBar'
+import { useCodegen }      from './hooks/useCodegen'
+import { useAutoRender }   from './hooks/useAutoRender'
 import { useAutoSave, loadSavedProject } from './hooks/useAutoSave'
-import { useEditorStore } from './store/editorStore'
+import { useEditorStore }  from './store/editorStore'
 
 function CollapsedSideLabel({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -51,6 +52,8 @@ function AppInner() {
   const [paletteCollapsed, setPaletteCollapsed] = useState(false)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [codeCollapsed, setCodeCollapsed]       = useState(false)
+
+  const showParametersPanel = useEditorStore((s) => s.showParametersPanel)
 
   const codePanelOpen  = useEditorStore((s) => s.codePanelOpen)
   const setCodePanelOpen = useEditorStore((s) => s.setCodePanelOpen)
@@ -113,7 +116,7 @@ function AppInner() {
             {/* Center: canvas + tab bar */}
             <Panel id="editor" defaultSize="58%" minSize="20%">
               <div className="flex flex-col h-full overflow-hidden">
-                <EditorPanel />
+                {showParametersPanel ? <ParametersPanel /> : <EditorPanel />}
                 <TabBar />
               </div>
             </Panel>

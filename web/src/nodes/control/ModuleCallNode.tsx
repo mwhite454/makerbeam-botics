@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { type NodeProps } from '@xyflow/react'
 import { BaseNode, SelectInput, TextInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
@@ -9,6 +9,12 @@ export function ModuleCallNode({ id, data, selected }: NodeProps) {
   const update = useEditorStore((s) => s.updateNodeData)
   const addTab = useEditorStore((s) => s.addTab)
   const tabs = useEditorStore((s) => s.tabs)
+
+  const sanitizeIdentifier = (raw: string): string => {
+    const trimmed = raw.trim()
+    const sanitized = trimmed.replace(/[^a-zA-Z0-9_]/g, '_')
+    return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `arg_${sanitized || 'value'}`
+  }
 
   const moduleNames = useMemo(
     () =>
@@ -35,6 +41,7 @@ export function ModuleCallNode({ id, data, selected }: NodeProps) {
         const nd = n.data as Record<string, unknown>
         return {
           argName: String(nd.argName || 'param'),
+          argKey: sanitizeIdentifier(String(nd.argName || 'param')),
           dataType: String(nd.dataType || 'number'),
           defaultValue: String(nd.defaultValue ?? '0'),
         }
@@ -52,8 +59,46 @@ export function ModuleCallNode({ id, data, selected }: NodeProps) {
 
   const argValues = d.argValues ?? {}
 
-  const handleArgChange = (argName: string, value: string) => {
-    update(id, { argValues: { ...argValues, [argName]: value } })
+  useEffect(() => {
+    if (!activeModuleName) return
+
+    const nextArgOrder = moduleArgs.map((a) => a.argKey)
+    const nextArgTypes: Record<string, string> = {}
+    for (const arg of moduleArgs) {
+      nextArgTypes[arg.argKey] = arg.dataType
+    }
+
+    const nextArgValues: Record<string, string> = {}
+    for (const key of nextArgOrder) {
+      if (argValues[key] !== undefined) {
+        nextArgValues[key] = argValues[key]
+      }
+    }
+
+    const currentOrder = d.argOrder ?? []
+    const currentTypes = d.argTypes ?? {}
+    const sameOrder =
+      currentOrder.length === nextArgOrder.length &&
+      currentOrder.every((k, i) => k === nextArgOrder[i])
+    const sameTypes =
+      Object.keys(currentTypes).length === Object.keys(nextArgTypes).length &&
+      Object.entries(nextArgTypes).every(([k, v]) => currentTypes[k] === v)
+    const sameValues =
+      Object.keys(argValues).length === Object.keys(nextArgValues).length &&
+      Object.entries(nextArgValues).every(([k, v]) => argValues[k] === v)
+
+    if (!sameOrder || !sameTypes || !sameValues || d.moduleName !== activeModuleName) {
+      update(id, {
+        moduleName: activeModuleName,
+        argOrder: nextArgOrder,
+        argTypes: nextArgTypes,
+        argValues: nextArgValues,
+      })
+    }
+  }, [activeModuleName, argValues, d.argOrder, d.argTypes, d.moduleName, id, moduleArgs, update])
+
+  const handleArgChange = (argKey: string, value: string) => {
+    update(id, { argValues: { ...argValues, [argKey]: value } })
   }
 
   const handleCreateModule = () => {
@@ -91,10 +136,10 @@ export function ModuleCallNode({ id, data, selected }: NodeProps) {
       )}
       {moduleArgs.map((arg) => (
         <TextInput
-          key={arg.argName}
+          key={arg.argKey}
           label={arg.argName}
-          value={argValues[arg.argName] ?? arg.defaultValue}
-          onChange={(v) => handleArgChange(arg.argName, v)}
+          value={argValues[arg.argKey] ?? arg.defaultValue}
+          onChange={(v) => handleArgChange(arg.argKey, v)}
         />
       ))}
       {moduleArgs.length === 0 && (

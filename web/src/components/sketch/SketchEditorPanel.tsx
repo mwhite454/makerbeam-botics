@@ -14,6 +14,7 @@ import { useSketchStore } from '@/store/sketchStore'
 import { sketchNodeTypes } from '@/nodes/sketch'
 import { SKETCH_PALETTE_ITEMS } from '@/types/sketchNodes'
 import { DeletableEdge } from '@/components/DeletableEdge'
+import { SearchBar } from '@/components/SearchBar'
 
 const edgeTypes = { default: DeletableEdge }
 
@@ -21,6 +22,8 @@ let sketchNodeIdCounter = 1
 
 export function SketchEditorPanel() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useSketchStore()
+  const updateNodeData = useSketchStore((s) => s.updateNodeData)
+  const groupSelectedNodes = useSketchStore((s) => s.groupSelectedNodes)
   const rfInstance = useRef<ReactFlowInstance | null>(null)
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -54,8 +57,20 @@ export function SketchEditorPanel() {
     [addNode]
   )
 
+  const onKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
+      event.preventDefault()
+      groupSelectedNodes()
+    }
+  }, [groupSelectedNodes])
+
   return (
     <div className="flex-1 relative bg-gray-950">
+      <SearchBar
+        nodes={nodes}
+        updateNodeData={updateNodeData as (id: string, data: Record<string, unknown>) => void}
+        rfInstance={rfInstance}
+      />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -67,6 +82,7 @@ export function SketchEditorPanel() {
         onInit={(instance) => { rfInstance.current = instance }}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onKeyDown={onKeyDown}
         fitView
         deleteKeyCode={['Delete', 'Backspace']}
         edgesFocusable

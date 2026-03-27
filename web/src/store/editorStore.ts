@@ -15,6 +15,17 @@ import { AllNodeData } from '@/types/nodes'
 export type RenderStatus = 'idle' | 'rendering' | 'done' | 'error'
 export type PreviewMode  = 'off' | 'stl' | 'png'
 
+// ─── Global Parameters ────────────────────────────────────────────────────────
+
+export type GlobalParamType = 'number' | 'string' | 'boolean' | 'vector2' | 'vector3' | 'expression'
+
+export interface GlobalParameter {
+  id: string
+  name: string
+  dataType: GlobalParamType
+  value: string
+}
+
 // ─── Tab/Module support ───────────────────────────────────────────────────────
 
 export interface EditorTab {
@@ -55,6 +66,10 @@ interface EditorState {
   updateNodeData: (id: string, data: Partial<AllNodeData>) => void
   addNode: (node: Node) => void
 
+  // ── Node Wrangler (grouping) ───────────────────────────────────────────────
+  groupSelectedNodes: () => void
+  ungroupNodes: (groupId: string) => void
+
   // ── Code generation ─────────────────────────────────────────────────────────
   generatedCode: string
   setGeneratedCode: (code: string) => void
@@ -72,12 +87,20 @@ interface EditorState {
   setRenderStatus: (s: RenderStatus) => void
   setRenderError: (msg: string, logs?: string) => void
 
+  // ── Global Parameters ────────────────────────────────────────────────────────
+  globalParameters: GlobalParameter[]
+  addGlobalParameter: () => void
+  updateGlobalParameter: (id: string, patch: Partial<Omit<GlobalParameter, 'id'>>) => void
+  removeGlobalParameter: (id: string) => void
+
   // ── UI state ────────────────────────────────────────────────────────────────
   codePanelOpen: boolean
+  showParametersPanel: boolean
   previewMode: PreviewMode
   autoRender: boolean
   toggleCodePanel: () => void
   setCodePanelOpen: (open: boolean) => void
+  setShowParametersPanel: (v: boolean) => void
   setPreviewMode: (m: PreviewMode) => void
   setAutoRender: (v: boolean) => void
 
@@ -210,6 +233,66 @@ export const useEditorStore = create<EditorState>()(
           state.nodes.push(node)
         }),
 
+      // ── Node Wrangler (grouping) ──────────────────────────────────────────
+      groupSelectedNodes: () =>
+        set((state) => {
+          const selected = state.nodes.filter((n) => n.selected && n.type !== 'group_node')
+          if (selected.length < 2) return
+
+          const PADDING = 40
+          const NODE_WIDTH = 220
+          const NODE_HEIGHT = 150
+
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+          for (const n of selected) {
+            minX = Math.min(minX, n.position.x)
+            minY = Math.min(minY, n.position.y)
+            maxX = Math.max(maxX, n.position.x + NODE_WIDTH)
+            maxY = Math.max(maxY, n.position.y + NODE_HEIGHT)
+          }
+
+          const groupX = minX - PADDING
+          const groupY = minY - PADDING
+          const groupW = maxX - minX + 2 * PADDING
+          const groupH = maxY - minY + 2 * PADDING
+
+          const groupId = `group-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+          const groupNode: Node = {
+            id: groupId,
+            type: 'group_node',
+            position: { x: groupX, y: groupY },
+            style: { width: groupW, height: groupH, zIndex: -1 },
+            data: { label: '', notes: '', color: '#3b82f6', width: groupW, height: groupH },
+          }
+
+          // Insert group at beginning (renders behind)
+          state.nodes.unshift(groupNode as Node)
+
+          // Re-parent selected nodes
+          for (const n of selected) {
+            n.parentId = groupId
+            n.position = { x: n.position.x - groupX, y: n.position.y - groupY }
+            n.selected = false
+          }
+        }),
+
+      ungroupNodes: (groupId) =>
+        set((state) => {
+          const groupNode = state.nodes.find((n) => n.id === groupId)
+          if (!groupNode) return
+
+          const groupPos = groupNode.position
+          // Reparent children back to absolute positions
+          for (const n of state.nodes) {
+            if (n.parentId === groupId) {
+              n.parentId = undefined
+              n.position = { x: n.position.x + groupPos.x, y: n.position.y + groupPos.y }
+            }
+          }
+          // Remove the group node
+          state.nodes = state.nodes.filter((n) => n.id !== groupId) as Node[]
+        }),
+
       // ── Code generation ─────────────────────────────────────────────────────
       generatedCode: '',
       setGeneratedCode: (code) => set((state) => { state.generatedCode = code }),
@@ -257,13 +340,40 @@ export const useEditorStore = create<EditorState>()(
 
       // ── UI state ────────────────────────────────────────────────────────────
       codePanelOpen: true,
+      showParametersPanel: false,
       previewMode: 'off',
       autoRender: true,
 
       toggleCodePanel: () => set((state) => { state.codePanelOpen = !state.codePanelOpen }),
       setCodePanelOpen: (open) => set((state) => { state.codePanelOpen = open }),
+      setShowParametersPanel: (v) => set((state) => { state.showParametersPanel = v }),
       setPreviewMode: (m) => set((state) => { state.previewMode = m }),
       setAutoRender: (v) => set((state) => { state.autoRender = v }),
+
+      // ── Global Parameters ────────────────────────────────────────────────────
+      globalParameters: [],
+
+      addGlobalParameter: () =>
+        set((state) => {
+          state.globalParameters.push({
+            id: `gp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: `PARAM_${state.globalParameters.length + 1}`,
+            dataType: 'number',
+            value: '0',
+          })
+        }),
+
+      updateGlobalParameter: (id, patch) =>
+        set((state) => {
+          const p = state.globalParameters.find((p) => p.id === id)
+          if (p) Object.assign(p, patch)
+        }),
+
+      removeGlobalParameter: (id) =>
+        set((state) => {
+          const idx = state.globalParameters.findIndex((p) => p.id === id)
+          if (idx !== -1) state.globalParameters.splice(idx, 1)
+        }),
 
       // ── Save / load ─────────────────────────────────────────────────────────
       exportProject: () => {
@@ -275,7 +385,7 @@ export const useEditorStore = create<EditorState>()(
           }
           return tab
         })
-        return JSON.stringify({ version: 1, tabs, activeTabId: state.activeTabId }, null, 2)
+        return JSON.stringify({ version: 1, tabs, activeTabId: state.activeTabId, globalParameters: state.globalParameters }, null, 2)
       },
 
       importProject: (json) =>
@@ -287,6 +397,7 @@ export const useEditorStore = create<EditorState>()(
             }
             state.tabs = data.tabs
             state.activeTabId = data.activeTabId || data.tabs[0].id
+            state.globalParameters = Array.isArray(data.globalParameters) ? data.globalParameters : []
             const active = state.tabs.find((t) => t.id === state.activeTabId)
             if (active) {
               state.nodes = active.nodes

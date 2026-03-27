@@ -6,6 +6,8 @@ import { SketchNodePalette }  from '@/components/sketch/SketchNodePalette'
 import { SketchEditorPanel }  from '@/components/sketch/SketchEditorPanel'
 import { SketchPreviewPanel } from '@/components/sketch/SketchPreviewPanel'
 import { SketchCodePanel }    from '@/components/sketch/SketchCodePanel'
+import { SketchTabBar }       from '@/components/sketch/SketchTabBar'
+import { ParametersPanel }    from '@/components/panels/ParametersPanel'
 import { useSketchCodegen }   from '@/hooks/useSketchCodegen'
 import { useSketchStore }     from '@/store/sketchStore'
 
@@ -47,6 +49,7 @@ function SketchAppInner() {
   const [paletteCollapsed, setPaletteCollapsed] = useState(false)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [codeCollapsed, setCodeCollapsed]       = useState(false)
+  const [showParametersPanel, setShowParametersPanel] = useState(false)
 
   const codePanelOpen  = useSketchStore((s) => s.codePanelOpen)
   const setCodePanelOpen = useSketchStore((s) => s.setCodePanelOpen)
@@ -101,10 +104,14 @@ function SketchAppInner() {
 
             <Separator className="separator-h" />
 
-            {/* Center: canvas */}
+            {/* Center: canvas / shared parameters */}
             <Panel id="sketch-editor" defaultSize="58%" minSize="20%">
               <div className="flex flex-col h-full overflow-hidden">
-                <SketchEditorPanel />
+                {showParametersPanel ? <ParametersPanel /> : <SketchEditorPanel />}
+                <SketchTabBar
+                  showParameters={showParametersPanel}
+                  onToggleParameters={setShowParametersPanel}
+                />
               </div>
             </Panel>
 

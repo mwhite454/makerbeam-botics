@@ -8,7 +8,7 @@ export function MultmatrixNode({ id, data, selected }: NodeProps) {
   const update = useEditorStore((s) => s.updateNodeData)
   return (
     <BaseNode id={id} category="transform" label="multmatrix" selected={selected}
-      inputHandles={[{ id: 'in-0', label: 'child' }]}>
+      inputHandles={[{ id: 'in-0', label: 'child' }, { id: 'in-1', label: 'matrix' }]}>
       <TextInput label="matrix (4x4 JSON)" value={d.matrix} onChange={(v) => update(id, { matrix: v })} />
     </BaseNode>
   )

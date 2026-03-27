@@ -93,8 +93,15 @@ export interface IfCondData        { condition: string }
 export interface EchoData          { message: string }
 export interface IntersectionForData { varName: string; start: Expr; end: Expr; step: Expr }
 export interface AssertData        { condition: string; message: string }
-export interface ModuleCallData    { moduleName: string; args: string; argValues?: Record<string, string> }
+export interface ModuleCallData    {
+  moduleName: string
+  args: string
+  argValues?: Record<string, string>
+  argOrder?: string[]
+  argTypes?: Record<string, string>
+}
 export interface ModuleArgData     { argName: string; dataType: string; defaultValue: string }
+export interface ExpressionNodeData { parameterName: string; expression: string }
 
 // Import
 export interface ImportSTLData     { filename: string }
@@ -103,10 +110,28 @@ export interface SurfaceData       { filename: string; center: boolean }
 // MakerBeam
 export interface MakerBeamData    { length: number }
 
+// ─── Node metadata (shared by all node types) ───────────────────────────────
+
+export interface NodeMeta {
+  nodeName?: string
+  nodeTags?: string[]
+  _searchMatch?: boolean
+}
+
+// ─── Group node data ─────────────────────────────────────────────────────────
+
+export interface GroupNodeData {
+  label: string
+  notes: string
+  color: string
+  width: number
+  height: number
+}
+
 // ─── Union type ───────────────────────────────────────────────────────────────
 
 export type AllNodeData =
-  | SphereData
+  (| SphereData
   | CubeData
   | CylinderData
   | PolyhedronData
@@ -133,9 +158,12 @@ export type AllNodeData =
   | AssertData
   | ModuleCallData
   | ModuleArgData
+  | ExpressionNodeData
   | ImportSTLData
   | SurfaceData
   | MakerBeamData
+  | GroupNodeData
+  ) & NodeMeta
 
 // ─── Palette definition ───────────────────────────────────────────────────────
 
@@ -192,6 +220,7 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   { type: 'assert_node', label: 'assert', category: 'control', defaultData: { condition: 'true', message: '' } as AssertData },
   { type: 'module_call', label: 'module_call', category: 'control', defaultData: { moduleName: '', args: '', argValues: {} } as ModuleCallData },
   { type: 'module_arg', label: 'module_arg', category: 'control', defaultData: { argName: 'param', dataType: 'number', defaultValue: '0' } as ModuleArgData },
+  { type: 'expression_node', label: 'expression', category: 'control', defaultData: { parameterName: '', expression: '{param}' } as ExpressionNodeData },
 
   // Import
   { type: 'import_stl',   label: 'import',  category: 'import', defaultData: { filename: 'model.stl' } as ImportSTLData },

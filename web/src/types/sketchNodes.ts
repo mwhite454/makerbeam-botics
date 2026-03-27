@@ -5,6 +5,7 @@ export type SketchNodeCategory =
   | 'sketch_boolean'
   | 'sketch_transform'
   | 'sketch_modifier'
+  | 'sketch_control'
 
 // ─── Category styling ─────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ export const SKETCH_CATEGORY_COLORS: Record<SketchNodeCategory, string> = {
   sketch_boolean:   'bg-red-600',
   sketch_transform: 'bg-orange-500',
   sketch_modifier:  'bg-teal-600',
+  sketch_control:   'bg-amber-600',
 }
 
 export const SKETCH_CATEGORY_TEXT: Record<SketchNodeCategory, string> = {
@@ -20,6 +22,7 @@ export const SKETCH_CATEGORY_TEXT: Record<SketchNodeCategory, string> = {
   sketch_boolean:   'text-white',
   sketch_transform: 'text-white',
   sketch_modifier:  'text-white',
+  sketch_control:   'text-white',
 }
 
 export const SKETCH_CATEGORY_LABELS: Record<SketchNodeCategory, string> = {
@@ -27,6 +30,7 @@ export const SKETCH_CATEGORY_LABELS: Record<SketchNodeCategory, string> = {
   sketch_boolean:   'Booleans',
   sketch_transform: 'Transforms',
   sketch_modifier:  'Modifiers',
+  sketch_control:   'Control',
 }
 
 // ─── Node data types ──────────────────────────────────────────────────────────
@@ -91,10 +95,18 @@ export interface SketchOffsetData {
   distance: number
 }
 
+export interface SketchExpressionData {
+  parameterName: string
+  expression: string
+}
+
 // ─── Union type ───────────────────────────────────────────────────────────────
 
+import type { NodeMeta, GroupNodeData } from './nodes'
+export type { NodeMeta }
+
 export type AllSketchNodeData =
-  | SketchRectangleData
+  (| SketchRectangleData
   | SketchCircleData
   | SketchNgonData
   | SketchLineData
@@ -106,6 +118,9 @@ export type AllSketchNodeData =
   | SketchScaleData
   | SketchMirrorData
   | SketchOffsetData
+  | SketchExpressionData
+  | GroupNodeData
+  ) & NodeMeta
 
 // ─── Palette definition ───────────────────────────────────────────────────────
 
@@ -138,4 +153,7 @@ export const SKETCH_PALETTE_ITEMS: SketchPaletteItem[] = [
 
   // Modifiers
   { type: 'sketch_offset', label: 'offset', category: 'sketch_modifier', defaultData: { distance: 2 } as SketchOffsetData },
+
+  // Control
+  { type: 'sketch_expression', label: 'expression', category: 'sketch_control', defaultData: { parameterName: '', expression: '{param}' } as SketchExpressionData },
 ]

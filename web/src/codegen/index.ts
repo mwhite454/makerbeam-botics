@@ -1,5 +1,6 @@
 import type { Node, Edge } from '@xyflow/react'
 import { MAKERBEAM_PREAMBLE } from './makerbeamPreamble'
+import type { GlobalParameter } from '@/store/editorStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,13 @@ function escapeString(v: unknown): string {
   return String(v ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
+function sanitizeIdentifier(raw: unknown, fallback = 'value'): string {
+  const src = String(raw ?? '').trim()
+  const sanitized = src.replace(/[^a-zA-Z0-9_]/g, '_')
+  if (/^[a-zA-Z_]/.test(sanitized)) return sanitized
+  return `v_${sanitized || fallback}`
+}
+
 // ─── Recursive code emitter ───────────────────────────────────────────────────
 
 function emitNode(
@@ -74,6 +82,7 @@ function emitNode(
   }
 
   const d = node.data as Record<string, unknown>
+  const customName = (d.nodeName as string | undefined)?.trim()
   const children = childrenOf.get(nodeId) ?? []
   const pad = indentStr(indent)
 
@@ -101,9 +110,13 @@ function emitNode(
   }
 
   function asIdentifier(raw: unknown): string {
-    const src = String(raw ?? '').trim()
-    const sanitized = src.replace(/[^a-zA-Z0-9_]/g, '_')
-    return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `v_${sanitized || 'value'}`
+    return sanitizeIdentifier(raw)
+  }
+
+  function resolveExpressionNode(valueData: Record<string, unknown>): string {
+    const parameterName = asIdentifier(valueData.parameterName ?? 'param')
+    const exprTemplate = String(valueData.expression ?? '{param}').trim() || '{param}'
+    return exprTemplate.replaceAll('{param}', parameterName)
   }
 
   function resolveValueInput(index: number, fallback: string): string {
@@ -120,6 +133,8 @@ function emitNode(
       case 'var_node':
       case 'module_arg':
         return asIdentifier(valueData.varName ?? valueData.argName)
+      case 'expression_node':
+        return resolveExpressionNode(valueData)
       default:
         return fallback
     }
@@ -148,7 +163,8 @@ function emitNode(
       const xExpr = resolveValueInput(0, String(num(d.x)))
       const yExpr = resolveValueInput(1, String(num(d.y)))
       const zExpr = resolveValueInput(2, String(num(d.z)))
-      result = `${pad}cube([${xExpr}, ${yExpr}, ${zExpr}], center = ${bool(d.center)});\n`
+      const centerExpr = resolveValueInput(3, bool(d.center))
+      result = `${pad}cube([${xExpr}, ${yExpr}, ${zExpr}], center = ${centerExpr});\n`
       break
     }
 
@@ -170,52 +186,87 @@ function emitNode(
     }
 
     // ── 2D Primitives ─────────────────────────────────────────────────────────
-    case 'circle':
-      result = `${pad}circle(r = ${num(d.r)}, $fn = ${num(d.fn)});\n`
+    case 'circle': {
+      const rExpr = resolveValueInput(0, String(num(d.r)))
+      const fnExpr = resolveValueInput(1, String(num(d.fn)))
+      result = `${pad}circle(r = ${rExpr}, $fn = ${fnExpr});\n`
       break
+    }
 
-    case 'square':
-      result = `${pad}square([${num(d.x)}, ${num(d.y)}], center = ${bool(d.center)});\n`
+    case 'square': {
+      const xExpr = resolveValueInput(0, String(num(d.x)))
+      const yExpr = resolveValueInput(1, String(num(d.y)))
+      const centerExpr = resolveValueInput(2, bool(d.center))
+      result = `${pad}square([${xExpr}, ${yExpr}], center = ${centerExpr});\n`
       break
+    }
 
     case 'polygon':
       result = `${pad}polygon(points = ${d.points});\n`
       break
 
-    case 'scadtext':
-      result = `${pad}text("${d.text}", size = ${num(d.size)}, font = "${d.font}", halign = "${d.halign}", valign = "${d.valign}");\n`
+    case 'scadtext': {
+      const sizeExpr = resolveValueInput(0, String(num(d.size)))
+      result = `${pad}text("${d.text}", size = ${sizeExpr}, font = "${d.font}", halign = "${d.halign}", valign = "${d.valign}");\n`
       break
+    }
 
     // ── Transforms ────────────────────────────────────────────────────────────
-    case 'translate':
-      result = emitTransform(`translate([${num(d.x)}, ${num(d.y)}, ${num(d.z)}])`)
+    case 'translate': {
+      const xExpr = resolveValueInput(1, String(num(d.x)))
+      const yExpr = resolveValueInput(2, String(num(d.y)))
+      const zExpr = resolveValueInput(3, String(num(d.z)))
+      result = emitTransform(`translate([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
+    }
 
-    case 'rotate':
-      result = emitTransform(`rotate([${num(d.x)}, ${num(d.y)}, ${num(d.z)}])`)
+    case 'rotate': {
+      const xExpr = resolveValueInput(1, String(num(d.x)))
+      const yExpr = resolveValueInput(2, String(num(d.y)))
+      const zExpr = resolveValueInput(3, String(num(d.z)))
+      result = emitTransform(`rotate([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
+    }
 
-    case 'scale':
-      result = emitTransform(`scale([${num(d.x)}, ${num(d.y)}, ${num(d.z)}])`)
+    case 'scale': {
+      const xExpr = resolveValueInput(1, String(num(d.x)))
+      const yExpr = resolveValueInput(2, String(num(d.y)))
+      const zExpr = resolveValueInput(3, String(num(d.z)))
+      result = emitTransform(`scale([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
+    }
 
-    case 'mirror':
-      result = emitTransform(`mirror([${num(d.x)}, ${num(d.y)}, ${num(d.z)}])`)
+    case 'mirror': {
+      const xExpr = resolveValueInput(1, String(num(d.x)))
+      const yExpr = resolveValueInput(2, String(num(d.y)))
+      const zExpr = resolveValueInput(3, String(num(d.z)))
+      result = emitTransform(`mirror([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
+    }
 
-    case 'resize':
-      result = emitTransform(`resize([${num(d.x)}, ${num(d.y)}, ${num(d.z)}], auto = ${bool(d.auto)})`)
+    case 'resize': {
+      const xExpr = resolveValueInput(1, String(num(d.x)))
+      const yExpr = resolveValueInput(2, String(num(d.y)))
+      const zExpr = resolveValueInput(3, String(num(d.z)))
+      const autoExpr = resolveValueInput(4, bool(d.auto))
+      result = emitTransform(`resize([${xExpr}, ${yExpr}, ${zExpr}], auto = ${autoExpr})`)
       break
+    }
 
-    case 'multmatrix':
-      result = emitTransform(`multmatrix(${d.matrix})`)
+    case 'multmatrix': {
+      const matrixExpr = resolveValueInput(1, String(d.matrix))
+      result = emitTransform(`multmatrix(${matrixExpr})`)
       break
+    }
 
     case 'offset':
       if (d.useR) {
-        result = emitTransform(`offset(r = ${num(d.r)})`)
+        const rExpr = resolveValueInput(1, String(num(d.r)))
+        result = emitTransform(`offset(r = ${rExpr})`)
       } else {
-        result = emitTransform(`offset(delta = ${num(d.delta)}, chamfer = ${bool(d.chamfer)})`)
+        const deltaExpr = resolveValueInput(2, String(num(d.delta)))
+        const chamferExpr = resolveValueInput(3, bool(d.chamfer))
+        result = emitTransform(`offset(delta = ${deltaExpr}, chamfer = ${chamferExpr})`)
       }
       break
 
@@ -234,18 +285,27 @@ function emitNode(
 
     // ── Extrusions ────────────────────────────────────────────────────────────
     case 'linear_extrude': {
-      const parts = [`height = ${num(d.height)}`, `center = ${bool(d.center)}`]
-      if (num(d.twist) !== 0) parts.push(`twist = ${num(d.twist)}`)
-      if (num(d.slices) > 0) parts.push(`slices = ${num(d.slices)}`)
-      if (num(d.scale) !== 1) parts.push(`scale = ${num(d.scale)}`)
-      if (num(d.fn) > 0) parts.push(`$fn = ${num(d.fn)}`)
+      const heightExpr = resolveValueInput(1, String(num(d.height)))
+      const twistExpr = resolveValueInput(2, String(num(d.twist)))
+      const slicesExpr = resolveValueInput(3, String(num(d.slices)))
+      const scaleExpr = resolveValueInput(4, String(num(d.scale)))
+      const fnExpr = resolveValueInput(5, String(num(d.fn)))
+      const centerExpr = resolveValueInput(6, bool(d.center))
+
+      const parts = [`height = ${heightExpr}`, `center = ${centerExpr}`]
+      if (num(d.twist) !== 0 || twistExpr !== String(num(d.twist))) parts.push(`twist = ${twistExpr}`)
+      if (num(d.slices) > 0 || slicesExpr !== String(num(d.slices))) parts.push(`slices = ${slicesExpr}`)
+      if (num(d.scale) !== 1 || scaleExpr !== String(num(d.scale))) parts.push(`scale = ${scaleExpr}`)
+      if (num(d.fn) > 0 || fnExpr !== String(num(d.fn))) parts.push(`$fn = ${fnExpr}`)
       result = emitTransform(`linear_extrude(${parts.join(', ')})`)
       break
     }
 
     case 'rotate_extrude': {
-      const parts = [`angle = ${num(d.angle)}`]
-      if (num(d.fn) > 0) parts.push(`$fn = ${num(d.fn)}`)
+      const angleExpr = resolveValueInput(1, String(num(d.angle)))
+      const fnExpr = resolveValueInput(2, String(num(d.fn)))
+      const parts = [`angle = ${angleExpr}`]
+      if (num(d.fn) > 0 || fnExpr !== String(num(d.fn))) parts.push(`$fn = ${fnExpr}`)
       result = emitTransform(`rotate_extrude(${parts.join(', ')})`)
       break
     }
@@ -271,16 +331,18 @@ function emitNode(
       break
     }
 
-    case 'projection':
-      result = emitTransform(`projection(cut = ${bool(d.cut)})`)
+    case 'projection': {
+      const cutExpr = resolveValueInput(1, bool(d.cut))
+      result = emitTransform(`projection(cut = ${cutExpr})`)
       break
+    }
 
     // ── Control / Math / Import ───────────────────────────────────────────────
     case 'for_loop': {
       const varName = d.varName || 'i'
-      const start = num(d.start)
-      const end   = num(d.end)
-      const step  = num(d.step) || 1
+      const start = resolveValueInput(1, String(num(d.start)))
+      const end   = resolveValueInput(2, String(num(d.end)))
+      const step  = resolveValueInput(3, String(num(d.step) || 1))
       if (!hasChild(0)) {
         result = `${pad}// for loop: no child connected\n`
       } else {
@@ -307,9 +369,9 @@ function emitNode(
 
     case 'intersection_for': {
       const varName = d.varName || 'i'
-      const start = num(d.start)
-      const end   = num(d.end)
-      const step  = num(d.step) || 1
+      const start = resolveValueInput(1, String(num(d.start)))
+      const end   = resolveValueInput(2, String(num(d.end)))
+      const step  = resolveValueInput(3, String(num(d.step) || 1))
       if (!hasChild(0)) {
         result = `${pad}// intersection_for: no child connected\n`
       } else {
@@ -346,7 +408,7 @@ function emitNode(
       break
 
     case 'var_node': {
-      const vName = d.varName || 'x'
+      const vName = customName ? asIdentifier(customName) : (d.varName || 'x')
       const vValue = d.value ?? '0'
       const vType = (d.dataType as string) || ''
       let formatted: string
@@ -366,14 +428,14 @@ function emitNode(
     }
 
     case 'parameter_node': {
-      const vName = d.varName || 'param'
+      const vName = customName ? asIdentifier(customName) : (d.varName || 'param')
       const vValue = d.value ?? 0
       result = `${pad}${vName} = ${vValue};\n`
       break
     }
 
     case 'parameter_list': {
-      const vName = d.varName || 'list_param'
+      const vName = customName ? asIdentifier(customName) : (d.varName || 'list_param')
       const vValue = d.value ?? '[]'
       result = `${pad}${vName} = ${vValue};\n`
       break
@@ -386,8 +448,12 @@ function emitNode(
     }
 
     case 'module_call': {
-      const moduleName = (d.moduleName || '').toString().trim()
+      const moduleName = sanitizeIdentifier(d.moduleName || '', 'module')
       const argValues = (d.argValues as Record<string, string> | undefined) ?? {}
+      const argTypes = (d.argTypes as Record<string, string> | undefined) ?? {}
+      const argOrderRaw = Array.isArray(d.argOrder)
+        ? (d.argOrder as unknown[]).map((v) => String(v))
+        : []
       const legacyArgs = (d.args || '').toString().trim()
       if (!moduleName) {
         result = `${pad}// module_call: no module selected\n`
@@ -396,15 +462,27 @@ function emitNode(
 
       // Build structured args: check connected handles first (start at index 1, 0 is children)
       const argParts: string[] = []
-      const argNames = Object.keys(argValues)
+      const argNames = argOrderRaw.length > 0
+        ? argOrderRaw
+        : Object.keys(argValues)
       for (let ai = 0; ai < argNames.length; ai++) {
         const aName = argNames[ai]
+        const normalizedName = sanitizeIdentifier(aName, 'arg')
         const handleIdx = ai + 1 // handle 0 is children
         const connected = resolveValueInput(handleIdx, '')
         if (connected) {
-          argParts.push(`${aName} = ${connected}`)
+          argParts.push(`${normalizedName} = ${connected}`)
         } else if (argValues[aName] !== undefined && argValues[aName] !== '') {
-          argParts.push(`${aName} = ${argValues[aName]}`)
+          const rawValue = argValues[aName]
+          const dataType = argTypes[aName] || ''
+          let formattedValue = rawValue
+          if (dataType === 'string') {
+            const isQuoted = /^\s*"[\s\S]*"\s*$/.test(rawValue)
+            formattedValue = isQuoted ? rawValue : `"${escapeString(rawValue)}"`
+          } else if (dataType === 'boolean') {
+            formattedValue = rawValue === 'true' ? 'true' : 'false'
+          }
+          argParts.push(`${normalizedName} = ${formattedValue}`)
         }
       }
 
@@ -448,6 +526,12 @@ function emitNode(
   }
 
   visiting.delete(nodeId)
+
+  // Prepend a name comment for named nodes (except var/param which already use the name)
+  if (customName && node.type !== 'var_node' && node.type !== 'parameter_node' && node.type !== 'parameter_list') {
+    result = `${pad}// ${customName}\n${result}`
+  }
+
   return result
 }
 
@@ -455,18 +539,43 @@ function indentStr(n: number): string {
   return ' '.repeat(n)
 }
 
+// ─── Global parameter emitter ─────────────────────────────────────────────────
+
+function emitGlobalParameter(p: GlobalParameter): string {
+  const name = p.name.replace(/[^a-zA-Z0-9_]/g, '_') || 'param'
+  switch (p.dataType) {
+    case 'string':
+      return `${name} = "${p.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}";\n`
+    case 'boolean':
+      return `${name} = ${p.value === 'true' ? 'true' : 'false'};\n`
+    default:
+      return `${name} = ${p.value || '0'};\n`
+  }
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function generateCode(nodes: Node[], edges: Edge[]): string {
-  if (nodes.length === 0) return '// Add nodes to the canvas to generate code\n'
+export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: GlobalParameter[]): string {
+  // Filter out group nodes (visual-only, no codegen impact)
+  const codeNodes = nodes.filter((n) => n.type !== 'group_node')
+  if (codeNodes.length === 0 && (!globalParameters || globalParameters.length === 0)) return '// Add nodes to the canvas to generate code\n'
 
-  const nodesMap = new Map(nodes.map((n) => [n.id, n]))
+  const nodesMap = new Map(codeNodes.map((n) => [n.id, n]))
   const childrenOf = buildAdjacency(edges)
-  const roots = findRoots(nodes, edges)
+  const roots = findRoots(codeNodes, edges)
 
   const hasMakerBeam = nodes.some((n) => n.type === 'makerbeam')
 
   let code = ''
+
+  // Emit global parameters first (top-level declarations)
+  if (globalParameters && globalParameters.length > 0) {
+    for (const param of globalParameters) {
+      code += emitGlobalParameter(param)
+    }
+    code += '\n'
+  }
+
   if (hasMakerBeam) {
     code += MAKERBEAM_PREAMBLE + '\n'
   }
@@ -507,7 +616,7 @@ export function generateModuleCode(moduleName: string, nodes: Node[], edges: Edg
   const argNodes = nodes.filter((n) => n.type === 'module_arg')
   const argParts = argNodes.map((n) => {
     const d = n.data as Record<string, unknown>
-    const name = String(d.argName || 'param').replace(/[^a-zA-Z0-9_]/g, '_')
+    const name = sanitizeIdentifier(String(d.argName || 'param'), 'arg')
     const defaultVal = String(d.defaultValue ?? '0')
     const dataType = String(d.dataType || 'number')
     let formatted: string
@@ -524,7 +633,8 @@ export function generateModuleCode(moduleName: string, nodes: Node[], edges: Edg
     }
     return `${name} = ${formatted}`
   })
-  const signature = `module ${moduleName}(${argParts.join(', ')})`
+  const safeModuleName = sanitizeIdentifier(moduleName, 'module')
+  const signature = `module ${safeModuleName}(${argParts.join(', ')})`
 
   if (nodes.length === 0) return `${signature} {\n  // Empty module\n}\n`
 

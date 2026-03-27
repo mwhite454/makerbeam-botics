@@ -12,6 +12,8 @@ import { SketchUnionNode, SketchDifferenceNode, SketchIntersectNode } from './bo
 import { SketchTranslateNode, SketchRotateNode, SketchScaleNode, SketchMirrorNode } from './transforms/SketchTransformNodes'
 
 import { SketchOffsetNode } from './modifiers/SketchOffsetNode'
+import { SketchExpressionNode } from './control/SketchExpressionNode'
+import { GroupNode }         from '../GroupNode'
 
 export const sketchNodeTypes: NodeTypes = {
   // Primitives
@@ -35,4 +37,10 @@ export const sketchNodeTypes: NodeTypes = {
 
   // Modifiers
   sketch_offset: SketchOffsetNode,
+
+  // Control
+  sketch_expression: SketchExpressionNode,
+
+  // Visual groups (Node Wrangler)
+  group_node: GroupNode,
 }
