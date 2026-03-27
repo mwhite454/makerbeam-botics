@@ -1,16 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
-import { Toolbar }      from './components/toolbar/Toolbar'
-import { NodePalette }  from './components/toolbar/NodePalette'
-import { EditorPanel }  from './components/panels/EditorPanel'
-import { PreviewPanel } from './components/panels/PreviewPanel'
-import { CodePanel }    from './components/panels/CodePanel'
-import { TabBar }       from './components/panels/TabBar'
-import { useCodegen }   from './hooks/useCodegen'
-import { useAutoRender } from './hooks/useAutoRender'
-import { useAutoSave, loadSavedProject } from './hooks/useAutoSave'
-import { useEditorStore } from './store/editorStore'
+import { SketchToolbar }      from '@/components/sketch/SketchToolbar'
+import { SketchNodePalette }  from '@/components/sketch/SketchNodePalette'
+import { SketchEditorPanel }  from '@/components/sketch/SketchEditorPanel'
+import { SketchPreviewPanel } from '@/components/sketch/SketchPreviewPanel'
+import { SketchCodePanel }    from '@/components/sketch/SketchCodePanel'
+import { useSketchCodegen }   from '@/hooks/useSketchCodegen'
+import { useSketchStore }     from '@/store/sketchStore'
 
 function CollapsedSideLabel({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -40,9 +37,8 @@ function CollapsedBottomLabel({ label, onClick }: { label: string; onClick: () =
   )
 }
 
-function AppInner() {
-  useCodegen()
-  const { doRender } = useAutoRender()
+function SketchAppInner() {
+  useSketchCodegen()
 
   const paletteRef = usePanelRef()
   const previewRef = usePanelRef()
@@ -52,10 +48,9 @@ function AppInner() {
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [codeCollapsed, setCodeCollapsed]       = useState(false)
 
-  const codePanelOpen  = useEditorStore((s) => s.codePanelOpen)
-  const setCodePanelOpen = useEditorStore((s) => s.setCodePanelOpen)
+  const codePanelOpen  = useSketchStore((s) => s.codePanelOpen)
+  const setCodePanelOpen = useSketchStore((s) => s.setCodePanelOpen)
 
-  // Sync store → panel when the toolbar toggle is clicked
   useEffect(() => {
     const panel = codeRef.current
     if (!panel) return
@@ -66,7 +61,6 @@ function AppInner() {
     }
   }, [codePanelOpen])
 
-  // Track collapsed states via onResize callbacks
   const onPaletteResize = useCallback(() => {
     setPaletteCollapsed(paletteRef.current?.isCollapsed() ?? false)
   }, [])
@@ -83,18 +77,15 @@ function AppInner() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 text-white overflow-hidden">
-      {/* Top toolbar — fixed */}
-      <Toolbar onRender={doRender} />
+      <SketchToolbar />
 
-      {/* Everything below the toolbar is resizable */}
       <Group orientation="vertical" className="flex-1">
-        {/* ── Main area (palette + editor + preview) ── */}
         <Panel defaultSize="75%" minSize="30%">
           <Group orientation="horizontal" className="h-full">
             {/* Left palette */}
             <Panel
               panelRef={paletteRef}
-              id="palette"
+              id="sketch-palette"
               defaultSize="12%"
               minSize="8%"
               collapsible
@@ -104,17 +95,16 @@ function AppInner() {
               {paletteCollapsed ? (
                 <CollapsedSideLabel label="Nodes" onClick={() => paletteRef.current?.expand()} />
               ) : (
-                <NodePalette />
+                <SketchNodePalette />
               )}
             </Panel>
 
             <Separator className="separator-h" />
 
-            {/* Center: canvas + tab bar */}
-            <Panel id="editor" defaultSize="58%" minSize="20%">
+            {/* Center: canvas */}
+            <Panel id="sketch-editor" defaultSize="58%" minSize="20%">
               <div className="flex flex-col h-full overflow-hidden">
-                <EditorPanel />
-                <TabBar />
+                <SketchEditorPanel />
               </div>
             </Panel>
 
@@ -123,7 +113,7 @@ function AppInner() {
             {/* Right preview */}
             <Panel
               panelRef={previewRef}
-              id="preview"
+              id="sketch-preview"
               defaultSize="30%"
               minSize="12%"
               collapsible
@@ -133,7 +123,7 @@ function AppInner() {
               {previewCollapsed ? (
                 <CollapsedSideLabel label="Preview" onClick={() => previewRef.current?.expand()} />
               ) : (
-                <PreviewPanel />
+                <SketchPreviewPanel />
               )}
             </Panel>
           </Group>
@@ -141,10 +131,10 @@ function AppInner() {
 
         <Separator className="separator-v" />
 
-        {/* ── Bottom code panel ── */}
+        {/* Bottom code panel */}
         <Panel
           panelRef={codeRef}
-          id="code"
+          id="sketch-code"
           defaultSize="25%"
           minSize="10%"
           collapsible
@@ -152,9 +142,9 @@ function AppInner() {
           onResize={onCodeResize}
         >
           {codeCollapsed ? (
-            <CollapsedBottomLabel label="Generated OpenSCAD" onClick={() => codeRef.current?.expand()} />
+            <CollapsedBottomLabel label="Generated Maker.js" onClick={() => codeRef.current?.expand()} />
           ) : (
-            <CodePanel />
+            <SketchCodePanel />
           )}
         </Panel>
       </Group>
@@ -162,10 +152,10 @@ function AppInner() {
   )
 }
 
-export default function App() {
+export default function SketchApp() {
   return (
     <ReactFlowProvider>
-      <AppInner />
+      <SketchAppInner />
     </ReactFlowProvider>
   )
 }

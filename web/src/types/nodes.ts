@@ -49,50 +49,52 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
   makerbeam:   'MakerBeam',
 }
 
+// ─── Expression type ──────────────────────────────────────────────────────────
+// A field value that is either a literal number or a freeform OpenSCAD expression
+export type Expr = number | string
+
 // ─── Node data types ──────────────────────────────────────────────────────────
 
 // 3D Primitives
-export interface SphereData       { r: number; fn: number }
-export interface CubeData         { x: number; y: number; z: number; center: boolean }
-export interface CylinderData     { h: number; r1: number; r2: number; center: boolean; fn: number }
+export interface SphereData       { r: Expr; fn: Expr }
+export interface CubeData         { x: Expr; y: Expr; z: Expr; center: boolean }
+export interface CylinderData     { h: Expr; r1: Expr; r2: Expr; center: boolean; fn: Expr }
 export interface PolyhedronData   { points: string; faces: string }
 
 // 2D Primitives
-export interface CircleData       { r: number; fn: number }
-export interface SquareData       { x: number; y: number; center: boolean }
+export interface CircleData       { r: Expr; fn: Expr }
+export interface SquareData       { x: Expr; y: Expr; center: boolean }
 export interface PolygonData      { points: string }
-export interface TextData         { text: string; size: number; font: string; halign: string; valign: string }
+export interface TextData         { text: string; size: Expr; font: string; halign: string; valign: string }
 
 // Transforms
-export interface TranslateData    { x: number; y: number; z: number }
-export interface RotateData       { x: number; y: number; z: number }
-export interface ScaleData        { x: number; y: number; z: number }
-export interface MirrorData       { x: number; y: number; z: number }
-export interface ResizeData       { x: number; y: number; z: number; auto: boolean }
+export interface TranslateData    { x: Expr; y: Expr; z: Expr }
+export interface RotateData       { x: Expr; y: Expr; z: Expr }
+export interface ScaleData        { x: Expr; y: Expr; z: Expr }
+export interface MirrorData       { x: Expr; y: Expr; z: Expr }
+export interface ResizeData       { x: Expr; y: Expr; z: Expr; auto: boolean }
 export interface MultmatrixData   { matrix: string }
-export interface OffsetData       { r: number; delta: number; useR: boolean; chamfer: boolean }
+export interface OffsetData       { r: Expr; delta: Expr; useR: boolean; chamfer: boolean }
 
 // Booleans
 export interface BooleanData      { childCount: number }
 
 // Extrusions
-export interface LinearExtrudeData  { height: number; center: boolean; twist: number; slices: number; scale: number; fn: number }
-export interface RotateExtrudeData  { angle: number; fn: number }
+export interface LinearExtrudeData  { height: Expr; center: boolean; twist: Expr; slices: Expr; scale: Expr; fn: Expr }
+export interface RotateExtrudeData  { angle: Expr; fn: Expr }
 
 // Modifiers
-export interface ColorData        { r: number; g: number; b: number; alpha: number; hex: string; advanced: boolean }
+export interface ColorData        { r: number; g: number; b: number; alpha: Expr; hex: string; advanced: boolean }
 export interface ProjectionData   { cut: boolean }
 
 // Control Flow
-export interface ForLoopData      { varName: string; start: number; end: number; step: number }
+export interface ForLoopData      { varName: string; start: Expr; end: Expr; step: Expr }
 export interface IfCondData        { condition: string }
-export interface VarData           { varName: string; value: string }
 export interface EchoData          { message: string }
-export interface IntersectionForData { varName: string; start: number; end: number; step: number }
+export interface IntersectionForData { varName: string; start: Expr; end: Expr; step: Expr }
 export interface AssertData        { condition: string; message: string }
-export interface ParameterData     { varName: string; value: string }
-export interface ParameterListData { varName: string; value: string; items: string[] }
-export interface ModuleCallData    { moduleName: string; args: string }
+export interface ModuleCallData    { moduleName: string; args: string; argValues?: Record<string, string> }
+export interface ModuleArgData     { argName: string; dataType: string; defaultValue: string }
 
 // Import
 export interface ImportSTLData     { filename: string }
@@ -126,13 +128,11 @@ export type AllNodeData =
   | ProjectionData
   | ForLoopData
   | IfCondData
-  | VarData
   | EchoData
   | IntersectionForData
   | AssertData
-  | ParameterData
-  | ParameterListData
   | ModuleCallData
+  | ModuleArgData
   | ImportSTLData
   | SurfaceData
   | MakerBeamData
@@ -187,13 +187,11 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   // Control Flow
   { type: 'for_loop',  label: 'for',      category: 'control', defaultData: { varName: 'i', start: 0, end: 5, step: 1 } as ForLoopData },
   { type: 'if_cond',   label: 'if',       category: 'control', defaultData: { condition: 'true' } as IfCondData },
-  { type: 'var_node',  label: 'variable', category: 'control', defaultData: { varName: 'x', value: '10' } as VarData },
   { type: 'echo_node', label: 'echo',     category: 'control', defaultData: { message: 'debug' } as EchoData },
   { type: 'intersection_for', label: 'intersection_for', category: 'control', defaultData: { varName: 'i', start: 0, end: 5, step: 1 } as IntersectionForData },
   { type: 'assert_node', label: 'assert', category: 'control', defaultData: { condition: 'true', message: '' } as AssertData },
-  { type: 'parameter_node', label: 'parameter', category: 'control', defaultData: { varName: 'length', value: '100' } as ParameterData },
-  { type: 'parameter_list', label: 'parameter_list', category: 'control', defaultData: { varName: 'points', value: '[0, 1, 2]', items: ['0', '1', '2'] } as ParameterListData },
-  { type: 'module_call', label: 'module_call', category: 'control', defaultData: { moduleName: '', args: '' } as ModuleCallData },
+  { type: 'module_call', label: 'module_call', category: 'control', defaultData: { moduleName: '', args: '', argValues: {} } as ModuleCallData },
+  { type: 'module_arg', label: 'module_arg', category: 'control', defaultData: { argName: 'param', dataType: 'number', defaultValue: '0' } as ModuleArgData },
 
   // Import
   { type: 'import_stl',   label: 'import',  category: 'import', defaultData: { filename: 'model.stl' } as ImportSTLData },

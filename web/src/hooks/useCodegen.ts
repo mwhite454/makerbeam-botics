@@ -37,12 +37,10 @@ export function useCodegen() {
       // Then emit the active tab's top-level code (or the main tab)
       const activeTab = tabs.find((t) => t.id === activeTabId)
       if (activeTab && !activeTab.isModule) {
-        // For non-module tabs, also prepend any module definitions
-        // Then emit the main code
         fullCode += generateCode(nodes, edges)
       } else if (activeTab && activeTab.isModule) {
-        // Show just the module code for the active module tab
-        // (already added above)
+        // Add a preview call so OpenSCAD renders the module's geometry
+        fullCode += `${activeTab.moduleName}();\n`
       }
 
       setGeneratedCode(fullCode)

@@ -1,5 +1,5 @@
 import { type NodeProps } from '@xyflow/react'
-import { BaseNode, VectorInput } from '../BaseNode'
+import { BaseNode, ExpressionVectorInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
 import type { RotateData } from '@/types/nodes'
 
@@ -9,7 +9,7 @@ export function RotateNode({ id, data, selected }: NodeProps) {
   return (
     <BaseNode id={id} category="transform" label="rotate" selected={selected}
       inputHandles={[{ id: 'in-0', label: 'child' }]}>
-      <VectorInput label="deg" value={[d.x, d.y, d.z]} step={15}
+      <ExpressionVectorInput label="deg" value={[d.x, d.y, d.z]} step={15}
         onChange={([x, y, z]) => update(id, { x, y, z })} />
     </BaseNode>
   )

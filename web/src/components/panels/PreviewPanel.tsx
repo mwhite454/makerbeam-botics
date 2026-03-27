@@ -3,20 +3,26 @@ import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useEditorStore } from '@/store/editorStore'
+import { parseOFF } from '@/utils/parseOFF'
 
-// ─── Three.js STL viewer ──────────────────────────────────────────────────────
+// ─── Shared Three.js scene setup ─────────────────────────────────────────────
 
-function STLViewer({ data }: { data: ArrayBuffer }) {
-  const mountRef = useRef<HTMLDivElement>(null)
-
+function useThreeScene(
+  mountRef: React.RefObject<HTMLDivElement | null>,
+  buildMesh: () => THREE.Mesh | THREE.Group | null,
+  deps: unknown[],
+) {
   useEffect(() => {
     const container = mountRef.current
     if (!container) return
 
+    const mesh = buildMesh()
+    if (!mesh) return
+
     const width  = container.clientWidth
     const height = container.clientHeight
 
-    const scene    = new THREE.Scene()
+    const scene = new THREE.Scene()
     scene.background = new THREE.Color(0x111827)
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000)
@@ -37,17 +43,6 @@ function STLViewer({ data }: { data: ArrayBuffer }) {
     dir2.position.set(-1, -1, -1)
     scene.add(dir2)
 
-    const loader   = new STLLoader()
-    const geometry = loader.parse(data)
-    geometry.computeVertexNormals()
-    geometry.computeBoundingBox()
-
-    const material = new THREE.MeshStandardMaterial({
-      color:     0x4488cc,
-      metalness: 0.2,
-      roughness: 0.6,
-    })
-    const mesh = new THREE.Mesh(geometry, material)
     scene.add(mesh)
 
     const box    = new THREE.Box3().setFromObject(mesh)
@@ -86,14 +81,125 @@ function STLViewer({ data }: { data: ArrayBuffer }) {
     })
     ro.observe(container)
 
+    // Collect disposables
+    const disposables: THREE.BufferGeometry[] = []
+    const materials: THREE.Material[] = []
+    mesh.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        disposables.push(obj.geometry)
+        if (Array.isArray(obj.material)) materials.push(...obj.material)
+        else materials.push(obj.material)
+      }
+    })
+
     return () => {
       cancelAnimationFrame(animId)
       controls.dispose()
       renderer.dispose()
-      geometry.dispose()
-      material.dispose()
+      disposables.forEach((g) => g.dispose())
+      materials.forEach((m) => m.dispose())
       ro.disconnect()
       container.removeChild(renderer.domElement)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps)
+}
+
+// ─── Three.js STL viewer ──────────────────────────────────────────────────────
+
+function STLViewer({ data }: { data: ArrayBuffer }) {
+  const mountRef = useRef<HTMLDivElement>(null)
+
+  useThreeScene(mountRef, () => {
+    const loader   = new STLLoader()
+    const geometry = loader.parse(data)
+    geometry.computeVertexNormals()
+
+    const material = new THREE.MeshStandardMaterial({
+      color:     0x4488cc,
+      metalness: 0.2,
+      roughness: 0.6,
+    })
+    return new THREE.Mesh(geometry, material)
+  }, [data])
+
+  return <div ref={mountRef} className="w-full h-full" />
+}
+
+// ─── Three.js OFF viewer (with color support) ────────────────────────────────
+
+function OFFViewer({ data }: { data: ArrayBuffer }) {
+  const mountRef = useRef<HTMLDivElement>(null)
+
+  useThreeScene(mountRef, () => {
+    try {
+      const parsed = parseOFF(data)
+
+      const numVerts = parsed.positions.length / 3
+      console.log(`[OFFViewer] parsed: ${numVerts} vertices, hasColors=${parsed.colors !== null}`)
+      if (parsed.colors) {
+        console.log('[OFFViewer] first 12 RGBA color values:', Array.from(parsed.colors.slice(0, 12)))
+      }
+
+      if (parsed.positions.length === 0) {
+        console.warn('[OFFViewer] parseOFF returned 0 vertices')
+        return null
+      }
+
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(parsed.positions, 3))
+      geometry.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3))
+
+      if (parsed.colors) {
+        // Use RGB (3 components) for vertex colors — Three.js handles vec3 vertex
+        // colors more reliably than vec4 across material types.
+        const rgb = new Float32Array(numVerts * 3)
+        for (let i = 0; i < numVerts; i++) {
+          rgb[i * 3]     = parsed.colors[i * 4]
+          rgb[i * 3 + 1] = parsed.colors[i * 4 + 1]
+          rgb[i * 3 + 2] = parsed.colors[i * 4 + 2]
+        }
+        geometry.setAttribute('color', new THREE.BufferAttribute(rgb, 3))
+      }
+
+      // Check if any face has alpha < 1
+      const hasTransparency = parsed.colors
+        ? parsed.colors.some((v, i) => i % 4 === 3 && v < 0.99)
+        : false
+
+      // For transparency, compute a min alpha to set material opacity
+      let minAlpha = 1.0
+      if (hasTransparency && parsed.colors) {
+        for (let i = 3; i < parsed.colors.length; i += 4) {
+          if (parsed.colors[i] < minAlpha) minAlpha = parsed.colors[i]
+        }
+      }
+
+      const material = parsed.colors
+        ? new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            metalness: 0.2,
+            roughness: 0.6,
+            side: THREE.DoubleSide,
+            transparent: hasTransparency,
+            opacity: hasTransparency ? minAlpha : 1.0,
+            depthWrite: !hasTransparency,
+          })
+        : new THREE.MeshStandardMaterial({
+            color: 0x4488cc,
+            metalness: 0.2,
+            roughness: 0.6,
+            side: THREE.DoubleSide,
+          })
+
+      return new THREE.Mesh(geometry, material)
+    } catch (err) {
+      console.error('[OFFViewer] Failed to parse OFF data:', err)
+      try {
+        const text = new TextDecoder().decode(data.slice(0, 500))
+        console.error('[OFFViewer] Raw OFF content (first 500 chars):', text)
+      } catch { /* ignore */ }
+      return null
     }
   }, [data])
 
@@ -162,7 +268,7 @@ function ErrorDisplay({ message, logs }: { message: string; logs: string | null 
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
 export function PreviewPanel() {
-  const { renderStatus, renderError, renderLogs, renderResultSTL, renderResultPNG, previewMode, generatedCode } = useEditorStore()
+  const { renderStatus, renderError, renderLogs, renderResultSTL, renderResultPNG, renderResultOFF, previewMode, generatedCode } = useEditorStore()
   const hasColorHints = /\bcolor\s*\(/.test(generatedCode)
 
   return (
@@ -176,7 +282,7 @@ export function PreviewPanel() {
           )}
           <span className="text-[10px] text-gray-500">
             {renderStatus === 'rendering' ? 'Rendering…' :
-             renderStatus === 'done'      ? previewMode.toUpperCase() :
+             renderStatus === 'done'      ? (previewMode === 'off' ? '3D' : previewMode.toUpperCase()) :
              renderStatus === 'error'     ? 'Error' :
              'Idle'}
           </span>
@@ -187,7 +293,7 @@ export function PreviewPanel() {
       <div className="flex-1 relative overflow-hidden">
         {previewMode === 'stl' && hasColorHints && (
           <div className="absolute top-2 left-2 right-2 z-10 rounded border border-amber-500/40 bg-amber-900/30 px-2 py-1 text-[10px] text-amber-200">
-            STL preview is geometry-only. Use PNG mode for OpenSCAD color and opacity preview.
+            STL preview is geometry-only. Switch to 3D mode for color preview.
           </div>
         )}
 
@@ -198,23 +304,28 @@ export function PreviewPanel() {
           </div>
         )}
 
-        {renderStatus === 'rendering' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-gray-500">Compiling with OpenSCAD WASM…</p>
-          </div>
-        )}
-
         {renderStatus === 'error' && renderError && (
           <ErrorDisplay message={renderError} logs={renderLogs} />
         )}
 
-        {renderStatus === 'done' && previewMode === 'stl' && renderResultSTL && (
+        {/* Only show viewers when render succeeded — hide stale geometry on error */}
+        {renderStatus !== 'error' && previewMode === 'off' && renderResultOFF && (
+          <OFFViewer data={renderResultOFF} />
+        )}
+
+        {renderStatus !== 'error' && previewMode === 'stl' && renderResultSTL && (
           <STLViewer data={renderResultSTL} />
         )}
 
-        {renderStatus === 'done' && previewMode === 'png' && renderResultPNG && (
+        {renderStatus !== 'error' && previewMode === 'png' && renderResultPNG && (
           <PNGViewer data={renderResultPNG} />
+        )}
+
+        {renderStatus === 'rendering' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-900/60">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-gray-500">Compiling with OpenSCAD WASM…</p>
+          </div>
         )}
       </div>
     </div>
