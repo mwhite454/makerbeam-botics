@@ -10,7 +10,7 @@ import type { OpenSCAD } from 'openscad-wasm'
 export type RenderFormat = 'stl' | 'png' | 'off'
 
 export type WorkerRequest =
-  | { type: 'render'; id: string; code: string; format: RenderFormat }
+  | { type: 'render'; id: string; code: string; format: RenderFormat; files?: Array<{ name: string; data: ArrayBuffer }> }
   | { type: 'ping' }
 
 export type WorkerResponse =
@@ -56,11 +56,11 @@ function handleRequest(req: WorkerRequest) {
   }
   if (req.type === 'render') {
     if (!wasmReady) { pendingQueue.push(req); return }
-    runRender(req.id, req.code, req.format)
+    runRender(req.id, req.code, req.format, req.files)
   }
 }
 
-async function runRender(id: string, code: string, format: RenderFormat) {
+async function runRender(id: string, code: string, format: RenderFormat, files?: Array<{ name: string; data: ArrayBuffer }>) {
   const stdout: string[] = []
   const stderr: string[] = []
 
@@ -89,6 +89,11 @@ async function runRender(id: string, code: string, format: RenderFormat) {
 
   try {
     raw.FS.writeFile(inputPath, code)
+
+    // Mount any imported files (STL, heightmaps, etc.) into the WASM FS
+    for (const file of files ?? []) {
+      raw.FS.writeFile(`/${file.name}`, new Uint8Array(file.data))
+    }
 
     const args: string[] = [inputPath, '-o', outputPath]
     if (format === 'off') {

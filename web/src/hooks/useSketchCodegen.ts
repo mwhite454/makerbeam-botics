@@ -10,6 +10,7 @@ export function useSketchCodegen() {
   const tabs = useEditorStore((s) => s.tabs)
   const activeTabId = useEditorStore((s) => s.activeTabId)
   const globalParameters = useEditorStore((s) => s.globalParameters)
+  const importedFiles = useEditorStore((s) => s.importedFiles)
   const setSketchGeneratedCode = useEditorStore((s) => s.setSketchGeneratedCode)
   const setSketchPreviewSvg = useEditorStore((s) => s.setSketchPreviewSvg)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -29,7 +30,7 @@ export function useSketchCodegen() {
 
       // Build model and generate SVG for preview
       try {
-        const model = buildSketchModel(nodes, edges, globalParameters)
+        const model = buildSketchModel(nodes, edges, globalParameters, importedFiles)
         if (model) {
           const svg = generateSketchSvg(model)
           setSketchPreviewSvg(svg)
@@ -45,5 +46,5 @@ export function useSketchCodegen() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [nodes, edges, globalParameters, isSketchTab, setSketchGeneratedCode, setSketchPreviewSvg])
+  }, [nodes, edges, globalParameters, importedFiles, isSketchTab, setSketchGeneratedCode, setSketchPreviewSvg])
 }

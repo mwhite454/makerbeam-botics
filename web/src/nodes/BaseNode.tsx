@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react'
-import { NodeCategory, CATEGORY_COLORS, CATEGORY_TEXT } from '@/types/nodes'
+import { CATEGORY_COLORS, CATEGORY_TEXT } from '@/types/nodes'
 import { NodeMetaFields } from '@/components/NodeMetaFields'
 import { useEditorStore } from '@/store/editorStore'
 
@@ -11,7 +11,8 @@ interface HandleConfig {
 
 interface BaseNodeProps {
   id: string
-  category: NodeCategory
+  // Core nodes pass a NodeCategory; pack nodes may pass any string category.
+  category: string
   label: string
   selected?: boolean
   inputHandles?: HandleConfig[]
@@ -637,6 +638,57 @@ export function TextInput({ label, value, onChange }: TextInputProps) {
         onChange={(e) => onChange(e.target.value)}
       />
     </label>
+  )
+}
+
+// ─── File picker input ────────────────────────────────────────────────────────
+
+interface FilePickerInputProps {
+  label: string
+  accept: string
+  filename: string
+  onFile: (filename: string, data: ArrayBuffer) => void
+}
+
+export function FilePickerInput({ label, accept, filename, onFile }: FilePickerInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        onFile(file.name, reader.result)
+      }
+    }
+    reader.readAsArrayBuffer(file)
+    // Reset so the same file can be re-selected if needed
+    e.target.value = ''
+  }
+
+  return (
+    <div className="flex flex-col gap-1 py-0.5">
+      <span className="text-[10px] text-gray-400">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="flex-1 truncate text-[10px] text-gray-500 bg-gray-800 border border-gray-700 rounded px-1.5 py-1 nodrag">
+          {filename || 'no file selected'}
+        </span>
+        <button
+          className="shrink-0 text-[10px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded px-1.5 py-1 nodrag"
+          onClick={() => inputRef.current?.click()}
+        >
+          Browse
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={handleChange}
+        />
+      </div>
+    </div>
   )
 }
 

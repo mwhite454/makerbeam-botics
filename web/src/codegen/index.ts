@@ -1,7 +1,7 @@
 import type { Node, Edge } from '@xyflow/react'
-import { MAKERBEAM_PREAMBLE } from './makerbeamPreamble'
 import type { GlobalParameter, EditorTab } from '@/store/editorStore'
 import { sketchToOpenscad } from './sketchToOpenscad'
+import { NODE_PACKS, PACK_CODEGEN_HANDLERS } from '@/nodepacks'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,6 +79,7 @@ function emitNode(
   indent: number,
   tabs?: EditorTab[],
   globalParameters?: GlobalParameter[],
+  importedFiles?: Record<string, string>,
 ): string {
   if (visiting.has(nodeId)) return indentStr(indent) + '// ERROR: cycle detected\n'
   if (visited.has(nodeId)) {
@@ -102,7 +103,7 @@ function emitNode(
   function getChild(index: number): string {
     const child = children.find((c) => c.handleIndex === index)
     if (!child) return ''  // no child connected — will be handled by caller
-    return emitNode(child.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters)
+    return emitNode(child.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters, importedFiles)
   }
 
   function getChildRef(index: number): ChildRef | undefined {
@@ -118,7 +119,7 @@ function emitNode(
       return pad + '  // No children connected\n'
     }
     return children.map((c) =>
-      emitNode(c.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters)
+      emitNode(c.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters, importedFiles)
     ).join('')
   }
 
@@ -237,7 +238,7 @@ function emitNode(
         break
       }
       // Generate polygon code from the sketch tab's nodes/edges
-      const sketchCode = sketchToOpenscad(sketchTab.nodes, sketchTab.edges, globalParameters ?? [])
+      const sketchCode = sketchToOpenscad(sketchTab.nodes, sketchTab.edges, globalParameters ?? [], undefined, importedFiles ?? {})
       // Indent the sketch code to match current indentation
       const indented = sketchCode
         .split('\n')
@@ -564,13 +565,27 @@ function emitNode(
       break
     }
 
-    // ── MakerBeam ─────────────────────────────────────────────────────────────
-    case 'makerbeam':
-      result = `${pad}makerbeam(${num(d.length)});\n`
-      break
-
-    default:
-      result = `${pad}// Unknown node type: ${node.type}\n`
+    default: {
+      // Try pack-registered handlers before falling back to unknown comment
+      const packHandler = node.type ? PACK_CODEGEN_HANDLERS[node.type] : undefined
+      if (packHandler) {
+        result = packHandler(node, {
+          pad,
+          num,
+          expr,
+          bool,
+          escapeString,
+          sanitizeIdentifier,
+          resolveValueInput,
+          getAllChildren,
+          getChild,
+          hasChild,
+          emitTransform,
+        })
+      } else {
+        result = `${pad}// Unknown node type: ${node.type}\n`
+      }
+    }
   }
 
   visiting.delete(nodeId)
@@ -603,7 +618,7 @@ function emitGlobalParameter(p: GlobalParameter): string {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: GlobalParameter[], tabs?: EditorTab[]): string {
+export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: GlobalParameter[], tabs?: EditorTab[], importedFiles?: Record<string, string>): string {
   // Filter out group nodes (visual-only, no codegen impact)
   const codeNodes = nodes.filter((n) => n.type !== 'group_node')
   if (codeNodes.length === 0 && (!globalParameters || globalParameters.length === 0)) return '// Add nodes to the canvas to generate code\n'
@@ -611,8 +626,6 @@ export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: Gl
   const nodesMap = new Map(codeNodes.map((n) => [n.id, n]))
   const childrenOf = buildAdjacency(edges)
   const roots = findRoots(codeNodes, edges)
-
-  const hasMakerBeam = nodes.some((n) => n.type === 'makerbeam')
 
   let code = ''
 
@@ -624,8 +637,12 @@ export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: Gl
     code += '\n'
   }
 
-  if (hasMakerBeam) {
-    code += MAKERBEAM_PREAMBLE + '\n'
+  // Emit pack preambles (e.g. MakerBeam module definitions, BOSL2 includes)
+  for (const pack of NODE_PACKS) {
+    if (pack.preamble) {
+      const preamble = pack.preamble(nodes)
+      if (preamble) code += preamble + '\n'
+    }
   }
 
   const visited = new Set<string>()
@@ -634,7 +651,7 @@ export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: Gl
   for (const node of nodes) {
     if (node.type === 'parameter_node' || node.type === 'parameter_list' || node.type === 'var_node') {
       if (!visited.has(node.id)) {
-        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters)
+        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters, importedFiles)
       }
     }
   }
@@ -643,13 +660,13 @@ export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: Gl
     code += '// WARNING: No root nodes found (possible cycle in entire graph)\n'
     for (const node of nodes) {
       if (!visited.has(node.id)) {
-        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters)
+        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters, importedFiles)
       }
     }
   } else {
     for (const rootId of roots) {
       if (!visited.has(rootId)) {
-        code += emitNode(rootId, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters)
+        code += emitNode(rootId, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters, importedFiles)
       }
     }
   }

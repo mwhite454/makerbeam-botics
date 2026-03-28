@@ -9,11 +9,10 @@ export type NodeCategory =
   | 'modifier'
   | 'control'
   | 'import'
-  | 'makerbeam'
 
 // ─── Category styling ─────────────────────────────────────────────────────────
 
-export const CATEGORY_COLORS: Record<NodeCategory, string> = {
+export const CATEGORY_COLORS: Record<string, string> = {
   primitive3d: 'bg-blue-600',
   primitive2d: 'bg-cyan-600',
   transform:   'bg-orange-500',
@@ -22,10 +21,9 @@ export const CATEGORY_COLORS: Record<NodeCategory, string> = {
   modifier:    'bg-green-600',
   control:     'bg-amber-600',
   import:      'bg-gray-600',
-  makerbeam:   'bg-yellow-500',
 }
 
-export const CATEGORY_TEXT: Record<NodeCategory, string> = {
+export const CATEGORY_TEXT: Record<string, string> = {
   primitive3d: 'text-white',
   primitive2d: 'text-white',
   transform:   'text-white',
@@ -34,10 +32,9 @@ export const CATEGORY_TEXT: Record<NodeCategory, string> = {
   modifier:    'text-white',
   control:     'text-white',
   import:      'text-white',
-  makerbeam:   'text-gray-900',
 }
 
-export const CATEGORY_LABELS: Record<NodeCategory, string> = {
+export const CATEGORY_LABELS: Record<string, string> = {
   primitive3d: '3D Primitives',
   primitive2d: '2D Primitives',
   transform:   'Transforms',
@@ -46,7 +43,6 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
   modifier:    'Modifiers',
   control:     'Control Flow',
   import:      'Import / Export',
-  makerbeam:   'MakerBeam',
 }
 
 // ─── Expression type ──────────────────────────────────────────────────────────
@@ -110,9 +106,7 @@ export interface SketchProfileData { sketchName: string }
 // Import
 export interface ImportSTLData     { filename: string }
 export interface SurfaceData       { filename: string; center: boolean }
-
-// MakerBeam
-export interface MakerBeamData    { length: number }
+export interface ImportSketchData  { filename: string }
 
 // ─── Node metadata (shared by all node types) ───────────────────────────────
 
@@ -167,7 +161,7 @@ export type AllNodeData =
   | SketchProfileData
   | ImportSTLData
   | SurfaceData
-  | MakerBeamData
+  | ImportSketchData
   | GroupNodeData
   ) & NodeMeta
 
@@ -176,8 +170,11 @@ export type AllNodeData =
 export interface PaletteItem {
   type: string
   label: string
-  category: NodeCategory
-  defaultData: AllNodeData
+  // Built-in nodes use NodeCategory; pack nodes may use any string category.
+  category: string
+  // Widened to Record<string, unknown> so pack nodes can supply their own data
+  // shapes without being in AllNodeData.
+  defaultData: AllNodeData | Record<string, unknown>
   description?: string
   inputs?: string
 }
@@ -273,7 +270,4 @@ export const PALETTE_ITEMS: PaletteItem[] = [
   { type: 'surface_node', label: 'surface', category: 'import', defaultData: { filename: 'heightmap.dat', center: false } as SurfaceData,
     description: 'Generates a 3D surface from a 2D heightmap data file (.dat or .png).', inputs: 'filename · center — origin at center of surface' },
 
-  // MakerBeam
-  { type: 'makerbeam', label: 'makerbeam', category: 'makerbeam', defaultData: { length: 150 } as MakerBeamData,
-    description: 'Places a MakerBeam 10×10 mm aluminum T-slot extrusion profile along the X axis.', inputs: 'length — beam length in mm' },
 ]

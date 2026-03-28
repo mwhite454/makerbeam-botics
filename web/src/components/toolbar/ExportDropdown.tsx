@@ -35,8 +35,8 @@ function SketchExportModal({
   const handleExport = () => {
     const tab = useEditorStore.getState().tabs.find((t) => t.id === selectedTabId)
     if (!tab) return
-    const { globalParameters: gp } = useEditorStore.getState()
-    const model = buildSketchModel(tab.nodes, tab.edges, gp)
+    const { globalParameters: gp, importedFiles } = useEditorStore.getState()
+    const model = buildSketchModel(tab.nodes, tab.edges, gp, importedFiles)
     if (!model) {
       alert('Nothing to export in this sketch.')
       return

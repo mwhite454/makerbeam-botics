@@ -10,6 +10,7 @@ export function useCodegen() {
   const tabs            = useEditorStore((s) => s.tabs)
   const activeTabId     = useEditorStore((s) => s.activeTabId)
   const globalParameters = useEditorStore((s) => s.globalParameters)
+  const importedFiles   = useEditorStore((s) => s.importedFiles)
   const setGeneratedCode = useEditorStore((s) => s.setGeneratedCode)
   const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -45,7 +46,7 @@ export function useCodegen() {
         // Loop body tabs don't emit a standalone call — for_loop nodes handle invocation
       } else {
         // Main or regular tabs
-        fullCode += generateCode(nodes, edges, globalParameters, tabs)
+        fullCode += generateCode(nodes, edges, globalParameters, tabs, importedFiles)
       }
 
       setGeneratedCode(fullCode)
@@ -55,5 +56,5 @@ export function useCodegen() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [nodes, edges, tabs, activeTabId, globalParameters, setGeneratedCode])
+  }, [nodes, edges, tabs, activeTabId, globalParameters, importedFiles, setGeneratedCode])
 }

@@ -44,10 +44,10 @@ import { ExpressionNode }   from './control/ExpressionNode'
 import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
 import { SurfaceNode }      from './import_nodes/SurfaceNode'
 
-import { MakerBeamNode }    from './makerbeam/MakerBeamNode'
 import { GroupNode }        from './GroupNode'
+import { PACK_NODE_TYPES }  from '@/nodepacks'
 
-export const nodeTypes: NodeTypes = {
+const coreNodeTypes: NodeTypes = {
   // 3D Primitives
   sphere:           SphereNode,
   cube:             CubeNode,
@@ -104,9 +104,10 @@ export const nodeTypes: NodeTypes = {
   import_stl:       ImportSTLNode,
   surface_node:     SurfaceNode,
 
-  // MakerBeam
-  makerbeam:        MakerBeamNode,
-
   // Visual groups (Node Wrangler)
   group_node:       GroupNode,
 }
+
+// Merge pack-provided node types (MakerBeam, BOSL2, etc.) into the registry.
+// To add a new library pack, register it in web/src/nodepacks/index.ts.
+export const nodeTypes: NodeTypes = { ...coreNodeTypes, ...PACK_NODE_TYPES }

@@ -15,11 +15,13 @@ import { useEditorStore }    from '@/store/editorStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
 import { nodeTypes }         from '@/nodes'
 import { PALETTE_ITEMS }     from '@/types/nodes'
+import { PACK_PALETTE_ITEMS } from '@/nodepacks'
 import { DeletableEdge }     from '@/components/DeletableEdge'
 import { SearchBar }         from '@/components/SearchBar'
 import { ContextMenu }       from '@/components/panels/ContextMenu'
 
 const edgeTypes = { default: DeletableEdge }
+const ALL_PALETTE_ITEMS = [...PALETTE_ITEMS, ...PACK_PALETTE_ITEMS]
 
 let nodeIdCounter = 1
 
@@ -45,7 +47,7 @@ export function EditorPanel() {
       const nodeType = event.dataTransfer.getData('application/reactflow-nodetype')
       if (!nodeType || !rfInstance.current) return
 
-      const paletteItem = PALETTE_ITEMS.find((p) => p.type === nodeType)
+      const paletteItem = ALL_PALETTE_ITEMS.find((p) => p.type === nodeType)
       if (!paletteItem) return
 
       const position = rfInstance.current.screenToFlowPosition({

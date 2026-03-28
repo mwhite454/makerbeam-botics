@@ -2,6 +2,7 @@ import type { Node, Edge } from '@xyflow/react'
 import makerjs from 'makerjs'
 import { layoutAlongPath } from '@/utils/layoutAlongPath'
 import type { GlobalParameter } from '@/store/editorStore'
+import { svgToMakerjsModel } from '@/utils/svgToMakerjs'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -98,6 +99,7 @@ function buildModel(
   visiting: Set<string>,
   visited: Set<string>,
   paramValues: Record<string, string>,
+  importedFiles: Record<string, string> = {},
 ): makerjs.IModel | null {
   if (visiting.has(nodeId) || visited.has(nodeId)) return null
   visiting.add(nodeId)
@@ -112,7 +114,7 @@ function buildModel(
   function getChildModel(index: number): makerjs.IModel | null {
     const child = children.find((c) => c.handleIndex === index)
     if (!child) return null
-    return buildModel(child.nodeId, nodesMap, childrenOf, visiting, visited, paramValues)
+    return buildModel(child.nodeId, nodesMap, childrenOf, visiting, visited, paramValues, importedFiles)
   }
 
   function getNumericValueInput(index: number, fallback: number): number {
@@ -384,6 +386,20 @@ function buildModel(
     case 'sketch_expression':
       model = null
       break
+
+    case 'sketch_import': {
+      const filename = String(d.filename || '')
+      if (filename && importedFiles[filename]) {
+        try {
+          // SVG is text; base64 decode to string
+          const svgContent = decodeURIComponent(escape(atob(importedFiles[filename])))
+          model = svgToMakerjsModel(svgContent)
+        } catch {
+          model = null
+        }
+      }
+      break
+    }
   }
 
   visiting.delete(nodeId)
@@ -624,6 +640,12 @@ function emitCode(
       break
     }
 
+    case 'sketch_import': {
+      // File import — parsed at preview time, not reflected in JS code output
+      result = `${pad}// import SVG: ${String(d.filename || '(none)')}\n`
+      break
+    }
+
     default:
       result = `${pad}// Unknown sketch node type: ${node.type}\n`
   }
@@ -676,7 +698,7 @@ export function generateSketchCode(nodes: Node[], edges: Edge[], globalParameter
 
 // ─── Public: build Maker.js IModel for preview ───────────────────────────────
 
-export function buildSketchModel(nodes: Node[], edges: Edge[], globalParameters: GlobalParameter[] = []): makerjs.IModel | null {
+export function buildSketchModel(nodes: Node[], edges: Edge[], globalParameters: GlobalParameter[] = [], importedFiles: Record<string, string> = {}): makerjs.IModel | null {
   const codeNodes = nodes.filter((n) => n.type !== 'group_node')
   if (codeNodes.length === 0) return null
 
@@ -693,7 +715,7 @@ export function buildSketchModel(nodes: Node[], edges: Edge[], globalParameters:
   // Build all root models and combine them
   const models: makerjs.IModel[] = []
   for (const rootId of roots) {
-    const m = buildModel(rootId, nodesMap, childrenOf, visiting, visited, paramValues)
+    const m = buildModel(rootId, nodesMap, childrenOf, visiting, visited, paramValues, importedFiles)
     if (m) models.push(m)
   }
 

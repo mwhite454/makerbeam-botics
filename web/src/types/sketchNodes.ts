@@ -6,6 +6,7 @@ export type SketchNodeCategory =
   | 'sketch_transform'
   | 'sketch_modifier'
   | 'sketch_control'
+  | 'sketch_import'
 
 // ─── Category styling ─────────────────────────────────────────────────────────
 
@@ -15,6 +16,7 @@ export const SKETCH_CATEGORY_COLORS: Record<SketchNodeCategory, string> = {
   sketch_transform: 'bg-orange-500',
   sketch_modifier:  'bg-teal-600',
   sketch_control:   'bg-amber-600',
+  sketch_import:    'bg-gray-600',
 }
 
 export const SKETCH_CATEGORY_TEXT: Record<SketchNodeCategory, string> = {
@@ -23,6 +25,7 @@ export const SKETCH_CATEGORY_TEXT: Record<SketchNodeCategory, string> = {
   sketch_transform: 'text-white',
   sketch_modifier:  'text-white',
   sketch_control:   'text-white',
+  sketch_import:    'text-white',
 }
 
 export const SKETCH_CATEGORY_LABELS: Record<SketchNodeCategory, string> = {
@@ -31,6 +34,7 @@ export const SKETCH_CATEGORY_LABELS: Record<SketchNodeCategory, string> = {
   sketch_transform: 'Transforms',
   sketch_modifier:  'Modifiers',
   sketch_control:   'Control',
+  sketch_import:    'Import',
 }
 
 // ─── Node data types ──────────────────────────────────────────────────────────
@@ -119,6 +123,10 @@ export interface SketchPathLayoutData {
   offset: number
 }
 
+export interface SketchImportData {
+  filename: string
+}
+
 // ─── Union type ───────────────────────────────────────────────────────────────
 
 import type { NodeMeta, GroupNodeData } from './nodes'
@@ -140,6 +148,7 @@ export type AllSketchNodeData =
   | SketchExpressionData
   | SketchPathData
   | SketchPathLayoutData
+  | SketchImportData
   | GroupNodeData
   ) & NodeMeta
 
@@ -200,4 +209,8 @@ export const SKETCH_PALETTE_ITEMS: SketchPaletteItem[] = [
   // Control
   { type: 'sketch_expression', label: 'expression', category: 'sketch_control', defaultData: { parameterName: '', expression: '{param}' } as SketchExpressionData,
     description: 'Evaluates an expression and exposes the result as a named value for use by other nodes.', inputs: 'parameter name · expression (use {varName} to reference upstream values)' },
+
+  // Import
+  { type: 'sketch_import', label: 'import SVG', category: 'sketch_import', defaultData: { filename: '' } as SketchImportData,
+    description: 'Imports an SVG file and contributes its geometry to the sketch.', inputs: 'filename — .svg file' },
 ]

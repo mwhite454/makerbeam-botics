@@ -72,7 +72,7 @@ interface EditorState {
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
   onConnect: OnConnect
-  updateNodeData: (id: string, data: Partial<AllNodeData> | Partial<AllSketchNodeData>) => void
+  updateNodeData: (id: string, data: Partial<AllNodeData> | Partial<AllSketchNodeData> | Record<string, unknown>) => void
   updateNodeDataInTab: (tabId: string, nodeId: string, data: Record<string, unknown>) => void
   propagateForLoopVarName: (forLoopNodeId: string, newVarName: string) => void
   addNode: (node: Node) => void
@@ -125,6 +125,11 @@ interface EditorState {
   projectName: string
   setProjectName: (name: string) => void
   resetProject: () => void
+
+  // ── Imported files ──────────────────────────────────────────────────────────
+  importedFiles: Record<string, string>  // filename → base64 content
+  addImportedFile: (filename: string, data: ArrayBuffer) => void
+  removeImportedFile: (filename: string) => void
 
   // ── Save/load ───────────────────────────────────────────────────────────────
   exportProject: () => string
@@ -500,7 +505,24 @@ export const useEditorStore = create<EditorState>()(
           state.nodes = []
           state.edges = []
           state.globalParameters = []
+          state.importedFiles = {}
           state.projectName = ''
+        }),
+
+      // ── Imported files ────────────────────────────────────────────────────
+      importedFiles: {},
+
+      addImportedFile: (filename, data) =>
+        set((state) => {
+          const bytes = new Uint8Array(data)
+          let binary = ''
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+          state.importedFiles[filename] = btoa(binary)
+        }),
+
+      removeImportedFile: (filename) =>
+        set((state) => {
+          delete state.importedFiles[filename]
         }),
 
       // ── Save / load ─────────────────────────────────────────────────────────
@@ -514,7 +536,7 @@ export const useEditorStore = create<EditorState>()(
           return tab
         })
         return JSON.stringify(
-          { version: 1, projectName: state.projectName, tabs, activeTabId: state.activeTabId, globalParameters: state.globalParameters },
+          { version: 1, projectName: state.projectName, tabs, activeTabId: state.activeTabId, globalParameters: state.globalParameters, importedFiles: state.importedFiles },
           null,
           2
         )
@@ -531,6 +553,7 @@ export const useEditorStore = create<EditorState>()(
             state.activeTabId = data.activeTabId || data.tabs[0].id
             state.globalParameters = Array.isArray(data.globalParameters) ? data.globalParameters : []
             state.projectName = typeof data.projectName === 'string' ? data.projectName : ''
+            state.importedFiles = (data.importedFiles && typeof data.importedFiles === 'object') ? data.importedFiles : {}
             const active = state.tabs.find((t) => t.id === state.activeTabId)
             if (active) {
               state.nodes = active.nodes

@@ -16,6 +16,7 @@ import { SketchExpressionNode } from './control/SketchExpressionNode'
 import { GroupNode }         from '../GroupNode'
 import { PathNode } from './path/PathNode'
 import { PathLayoutNode } from './path/PathLayoutNode'
+import { ImportSketchNode } from './import/ImportSketchNode'
 
 export const sketchNodeTypes: NodeTypes = {
   // Primitives
@@ -44,6 +45,9 @@ export const sketchNodeTypes: NodeTypes = {
   sketch_expression: SketchExpressionNode,
   sketch_path: PathNode,
   sketch_path_layout: PathLayoutNode,
+
+  // Import
+  sketch_import: ImportSketchNode,
 
   // Visual groups (Node Wrangler)
   group_node: GroupNode,

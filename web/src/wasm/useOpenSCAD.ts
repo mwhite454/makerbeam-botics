@@ -89,7 +89,7 @@ export function useOpenSCAD() {
   }, [])
 
   const render = useCallback(
-    (code: string, format: RenderFormat = 'stl'): Promise<ArrayBuffer> => {
+    (code: string, format: RenderFormat = 'stl', files?: Array<{ name: string; data: ArrayBuffer }>): Promise<ArrayBuffer> => {
       return new Promise((resolve, reject) => {
         let worker: Worker
         try {
@@ -102,8 +102,9 @@ export function useOpenSCAD() {
         const id = crypto.randomUUID()
         pendingMap.current.set(id, { resolve, reject })
 
-        const req: WorkerRequest = { type: 'render', id, code, format }
-        worker.postMessage(req)
+        const req: WorkerRequest = { type: 'render', id, code, format, files }
+        const transferables = (files ?? []).map((f) => f.data)
+        worker.postMessage(req, transferables)
 
         // Timeout after 120 seconds
         setTimeout(() => {

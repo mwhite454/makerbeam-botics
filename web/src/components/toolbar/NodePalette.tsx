@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { PALETTE_ITEMS, CATEGORY_COLORS, CATEGORY_TEXT, CATEGORY_LABELS, type NodeCategory, type PaletteItem } from '@/types/nodes'
+import { PALETTE_ITEMS, CATEGORY_COLORS, CATEGORY_TEXT, CATEGORY_LABELS, type PaletteItem } from '@/types/nodes'
+import { PACK_PALETTE_ITEMS, PACK_CATEGORY_ORDER, PACK_CATEGORY_COLORS, PACK_CATEGORY_TEXT, PACK_CATEGORY_LABELS } from '@/nodepacks'
 import { useEditorStore } from '@/store/editorStore'
 import { NodeTooltipPopover } from './NodeTooltipPopover'
 
-const CATEGORY_ORDER: NodeCategory[] = [
+const CORE_CATEGORY_ORDER: string[] = [
   'primitive3d',
   'primitive2d',
   'transform',
@@ -12,8 +13,16 @@ const CATEGORY_ORDER: NodeCategory[] = [
   'modifier',
   'control',
   'import',
-  'makerbeam',
 ]
+
+// Pack categories are appended after core categories.
+// To change the order of a pack's category, adjust NODE_PACKS order in web/src/nodepacks/index.ts.
+const CATEGORY_ORDER: string[] = [...CORE_CATEGORY_ORDER, ...PACK_CATEGORY_ORDER]
+
+const ALL_PALETTE_ITEMS: PaletteItem[] = [...PALETTE_ITEMS, ...PACK_PALETTE_ITEMS]
+const ALL_CATEGORY_COLORS: Record<string, string> = { ...CATEGORY_COLORS, ...PACK_CATEGORY_COLORS }
+const ALL_CATEGORY_TEXT: Record<string, string>   = { ...CATEGORY_TEXT,   ...PACK_CATEGORY_TEXT   }
+const ALL_CATEGORY_LABELS: Record<string, string> = { ...CATEGORY_LABELS, ...PACK_CATEGORY_LABELS }
 
 // Node types only available on module tabs
 const MODULE_ONLY_TYPES = new Set(['module_arg'])
@@ -48,7 +57,7 @@ export function NodePalette() {
 
   const grouped = CATEGORY_ORDER.map((cat) => ({
     category: cat,
-    items: PALETTE_ITEMS.filter((item) => {
+    items: ALL_PALETTE_ITEMS.filter((item) => {
       if (item.category !== cat) return false
       if (MODULE_ONLY_TYPES.has(item.type) && !isModuleTab) return false
       return true
@@ -65,7 +74,7 @@ export function NodePalette() {
           <div key={category} className="border-b border-white/5">
             <div className="px-3 py-1.5">
               <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">
-                {CATEGORY_LABELS[category]}
+                {ALL_CATEGORY_LABELS[category]}
               </span>
             </div>
             <div className="px-2 pb-2 flex flex-wrap gap-1">
@@ -78,7 +87,7 @@ export function NodePalette() {
                   onMouseLeave={handleMouseLeave}
                   className={`
                     cursor-grab active:cursor-grabbing
-                    ${CATEGORY_COLORS[item.category]} ${CATEGORY_TEXT[item.category]}
+                    ${ALL_CATEGORY_COLORS[item.category]} ${ALL_CATEGORY_TEXT[item.category]}
                     rounded px-2 py-0.5 text-[10px] font-medium
                     select-none hover:opacity-80 transition-opacity
                     border border-white/10

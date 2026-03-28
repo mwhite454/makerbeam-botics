@@ -6,6 +6,7 @@ const DEBOUNCE_MS = 900
 
 export function useAutoRender() {
   const generatedCode   = useEditorStore((s) => s.generatedCode)
+  const importedFiles   = useEditorStore((s) => s.importedFiles)
   const autoRender      = useEditorStore((s) => s.autoRender)
   const previewMode     = useEditorStore((s) => s.previewMode)
   const setPreviewMode  = useEditorStore((s) => s.setPreviewMode)
@@ -24,6 +25,18 @@ export function useAutoRender() {
     if (!code.trim() || code.includes('// Add nodes')) return
     if (wasmStatus !== 'ready') return
 
+    // Decode base64 imported files to ArrayBuffers for the worker.
+    // Called fresh each time because ArrayBuffers are transferred (neutered) on postMessage.
+    function decodeFiles() {
+      return Object.entries(importedFiles).map(([name, b64]) => {
+        const binary = atob(b64)
+        const data = new ArrayBuffer(binary.length)
+        const view = new Uint8Array(data)
+        for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i)
+        return { name, data }
+      })
+    }
+
     // PNG fallback to STL if environment doesn't support it
     let effectiveMode = mode
     if (mode === 'png' && pngUnavailableRef.current) effectiveMode = 'stl'
@@ -34,7 +47,7 @@ export function useAutoRender() {
     setRenderStatus('rendering')
     const renderStart = performance.now()
     try {
-      const data = await render(code, effectiveMode)
+      const data = await render(code, effectiveMode, decodeFiles())
       if (isStale()) return
       console.log(`[Botics] wasm render: ${(performance.now() - renderStart).toFixed(0)}ms, format=${effectiveMode}`)
       if (effectiveMode === 'stl') {
@@ -56,7 +69,7 @@ export function useAutoRender() {
       if (isPngEnvironmentIssue) {
         try {
           pngUnavailableRef.current = true
-          const stlData = await render(code, 'stl')
+          const stlData = await render(code, 'stl', decodeFiles())
           if (isStale()) return
           setPreviewMode('stl')
           setRenderResultSTL(stlData)
@@ -75,7 +88,7 @@ export function useAutoRender() {
       // If OFF format failed, fall back to STL
       if (effectiveMode === 'off') {
         try {
-          const stlData = await render(code, 'stl')
+          const stlData = await render(code, 'stl', decodeFiles())
           if (isStale()) return
           setPreviewMode('stl')
           setRenderResultSTL(stlData)
@@ -88,7 +101,7 @@ export function useAutoRender() {
       if (isStale()) return
       setRenderError(renderErr.message || String(err), renderErr.logs || '')
     }
-  }, [render, wasmStatus, setRenderStatus, setRenderResultSTL, setRenderResultPNG, setRenderResultOFF, setRenderError, setPreviewMode])
+  }, [render, wasmStatus, importedFiles, setRenderStatus, setRenderResultSTL, setRenderResultPNG, setRenderResultOFF, setRenderError, setPreviewMode])
 
   // Auto-render on code change
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { type NodeProps } from '@xyflow/react'
-import { BaseNode, NumberInput } from '../BaseNode'
+import { BaseNode, NumberInput } from '@/nodes/BaseNode'
 import { useEditorStore } from '@/store/editorStore'
-import type { MakerBeamData } from '@/types/nodes'
+import type { MakerBeamData } from './types'
 
 export function MakerBeamNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as MakerBeamData

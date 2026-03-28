@@ -17,8 +17,9 @@ export function sketchToOpenscad(
   edges: Edge[],
   globalParameters: GlobalParameter[] = [],
   maxArcFacet?: number,
+  importedFiles: Record<string, string> = {},
 ): string {
-  const model = buildSketchModel(nodes, edges, globalParameters)
+  const model = buildSketchModel(nodes, edges, globalParameters, importedFiles)
   if (!model) return '// Empty sketch\n'
   return modelToOpenscad(model, maxArcFacet)
 }
