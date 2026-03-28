@@ -1,8 +1,8 @@
-import { useSketchStore } from '@/store/sketchStore'
+import { useEditorStore } from '@/store/editorStore'
 import { useState } from 'react'
 
 export function SketchCodePanel() {
-  const generatedCode = useSketchStore((s) => s.generatedCode)
+  const generatedCode = useEditorStore((s) => s.sketchGeneratedCode)
   const [copied, setCopied] = useState(false)
 
   const copy = () => {

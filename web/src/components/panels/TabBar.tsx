@@ -38,10 +38,20 @@ export function TabBar() {
           }}
           onDoubleClick={() => startRename(tab.id, tab.label)}
         >
-          {/* Module badge */}
-          {tab.isModule && (
+          {/* Tab type badge */}
+          {tab.tabType === 'module' && (
             <span className="text-[8px] bg-purple-600/50 text-purple-300 rounded px-1 py-0 font-bold uppercase">
               mod
+            </span>
+          )}
+          {tab.tabType === 'sketch' && (
+            <span className="text-[8px] bg-pink-600/50 text-pink-300 rounded px-1 py-0 font-bold uppercase">
+              skt
+            </span>
+          )}
+          {tab.tabType === 'loop' && (
+            <span className="text-[8px] bg-amber-700/60 text-amber-300 rounded px-1 py-0 font-bold uppercase">
+              lp
             </span>
           )}
 
@@ -82,7 +92,7 @@ export function TabBar() {
       <div className="flex items-center gap-0 ml-1 shrink-0">
         <button
           className="text-gray-600 hover:text-white transition-colors px-2 text-[11px] h-full hover:bg-gray-800/50"
-          onClick={() => addTab(`Tab ${tabs.length + 1}`, false)}
+          onClick={() => addTab(`Tab ${tabs.length + 1}`, 'tab')}
           title="Add new tab"
         >
           + Tab
@@ -90,12 +100,22 @@ export function TabBar() {
         <button
           className="text-gray-600 hover:text-purple-300 transition-colors px-2 text-[11px] h-full hover:bg-gray-800/50"
           onClick={() => {
-            const name = `module_${tabs.filter(t => t.isModule).length + 1}`
-            addTab(name, true)
+            const name = `module_${tabs.filter(t => t.tabType === 'module').length + 1}`
+            addTab(name, 'module')
           }}
           title="Add new module tab"
         >
           + Module
+        </button>
+        <button
+          className="text-gray-600 hover:text-pink-300 transition-colors px-2 text-[11px] h-full hover:bg-gray-800/50"
+          onClick={() => {
+            const name = `sketch_${tabs.filter(t => t.tabType === 'sketch').length + 1}`
+            addTab(name, 'sketch')
+          }}
+          title="Add new sketch tab"
+        >
+          + Sketch
         </button>
       </div>
 

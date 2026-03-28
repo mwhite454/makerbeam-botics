@@ -10,20 +10,23 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
+import { useEditorStore } from '@/store/editorStore'
+import hitTest from '@/utils/hitTest'
 import { useSketchStore } from '@/store/sketchStore'
 import { sketchNodeTypes } from '@/nodes/sketch'
 import { SKETCH_PALETTE_ITEMS } from '@/types/sketchNodes'
 import { DeletableEdge } from '@/components/DeletableEdge'
 import { SearchBar } from '@/components/SearchBar'
+import { AnchorOverlay } from '@/components/sketch/AnchorOverlay'
 
 const edgeTypes = { default: DeletableEdge }
 
 let sketchNodeIdCounter = 1
 
 export function SketchEditorPanel() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useSketchStore()
-  const updateNodeData = useSketchStore((s) => s.updateNodeData)
-  const groupSelectedNodes = useSketchStore((s) => s.groupSelectedNodes)
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useEditorStore()
+  const updateNodeData = useEditorStore((s) => s.updateNodeData)
+  const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes)
   const rfInstance = useRef<ReactFlowInstance | null>(null)
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -57,6 +60,65 @@ export function SketchEditorPanel() {
     [addNode]
   )
 
+  const addAnchorMode = useSketchStore((s) => s.addAnchorMode)
+  const toggleAddAnchorMode = useSketchStore((s) => s.toggleAddAnchorMode)
+  const updateSketchNode = useEditorStore((s) => s.updateNodeData)
+  const nodesState = useEditorStore((s) => s.nodes)
+  const dragRef = useRef<{ nodeId: string; anchorIndex: number } | null>(null)
+
+  const onPaneClick = useCallback((event: any) => {
+    if (!rfInstance.current) return
+    const nodes = useEditorStore.getState().nodes
+    const sel = nodes.find((n) => n.selected && n.type === 'sketch_path')
+    if (!sel) return
+    const flowPos = rfInstance.current.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+    try {
+      const data = sel.data as Record<string, unknown>
+      const anchors = JSON.parse(String(data.anchorsJson || '[]')) as Array<{ pos: [number, number] }>
+      if (addAnchorMode) {
+        if (anchors.length >= 2) {
+          const pts = anchors.map((a) => a.pos)
+          const segIdx = hitTest.nearestSegmentIndex(pts as any, flowPos.x, flowPos.y)
+          const insertAt = segIdx >= 0 ? segIdx + 1 : anchors.length
+          ;(anchors as any).splice(insertAt, 0, { id: `a${Date.now()}`, pos: [flowPos.x, flowPos.y] })
+        } else {
+          ;(anchors as any).push({ id: `a${Date.now()}`, pos: [flowPos.x, flowPos.y] })
+        }
+        updateSketchNode(sel.id, { anchorsJson: JSON.stringify(anchors) })
+        return
+      }
+
+      // Not in add mode: check for anchor hit to start drag
+      if (anchors.length > 0) {
+        const pts = anchors.map((a) => a.pos)
+        const idx = hitTest.nearestAnchorIndex(pts as any, flowPos.x, flowPos.y, 6)
+        if (idx >= 0) {
+          dragRef.current = { nodeId: sel.id, anchorIndex: idx }
+          const onMove = (ev: MouseEvent) => {
+            const fp = rfInstance.current!.screenToFlowPosition({ x: ev.clientX, y: ev.clientY })
+            const st = useEditorStore.getState()
+            const node = st.nodes.find((n) => n.id === sel.id)
+            if (!node) return
+            try {
+              const a = JSON.parse(String(node.data.anchorsJson || '[]')) as Array<{ pos: [number, number] }>
+              a[idx].pos = [fp.x, fp.y]
+              useEditorStore.setState((s) => { const n = s.nodes.find((x) => x.id === sel.id); if (n) Object.assign(n.data, { anchorsJson: JSON.stringify(a) }) })
+            } catch {}
+          }
+          const onUp = () => {
+            dragRef.current = null
+            window.removeEventListener('mousemove', onMove)
+            window.removeEventListener('mouseup', onUp)
+          }
+          window.addEventListener('mousemove', onMove)
+          window.addEventListener('mouseup', onUp)
+        }
+      }
+    } catch (err) {
+      console.error('[onPaneClick] failed to handle click', err)
+    }
+  }, [addAnchorMode, updateSketchNode])
+
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
       event.preventDefault()
@@ -65,7 +127,7 @@ export function SketchEditorPanel() {
   }, [groupSelectedNodes])
 
   return (
-    <div className="flex-1 relative bg-gray-950">
+    <div className="flex-1 relative bg-gray-950" style={{ cursor: addAnchorMode ? 'crosshair' : undefined }}>
       <SearchBar
         nodes={nodes}
         updateNodeData={updateNodeData as (id: string, data: Record<string, unknown>) => void}
@@ -83,6 +145,7 @@ export function SketchEditorPanel() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onKeyDown={onKeyDown}
+        onPaneClick={(e) => onPaneClick(e as unknown as MouseEvent)}
         fitView
         deleteKeyCode={['Delete', 'Backspace']}
         edgesFocusable
@@ -98,6 +161,7 @@ export function SketchEditorPanel() {
         }}
         proOptions={{ hideAttribution: true }}
       >
+        <AnchorOverlay />
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}

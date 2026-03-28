@@ -1,17 +1,22 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels'
-import { Toolbar }         from './components/toolbar/Toolbar'
-import { NodePalette }     from './components/toolbar/NodePalette'
-import { EditorPanel }     from './components/panels/EditorPanel'
-import { ParametersPanel } from './components/panels/ParametersPanel'
-import { PreviewPanel }    from './components/panels/PreviewPanel'
-import { CodePanel }       from './components/panels/CodePanel'
-import { TabBar }          from './components/panels/TabBar'
-import { useCodegen }      from './hooks/useCodegen'
-import { useAutoRender }   from './hooks/useAutoRender'
+import { Toolbar }              from './components/toolbar/Toolbar'
+import { NodePalette }          from './components/toolbar/NodePalette'
+import { EditorPanel }          from './components/panels/EditorPanel'
+import { ParametersPanel }      from './components/panels/ParametersPanel'
+import { PreviewPanel }         from './components/panels/PreviewPanel'
+import { CodePanel }            from './components/panels/CodePanel'
+import { TabBar }               from './components/panels/TabBar'
+import { SketchEditorPanel }    from './components/sketch/SketchEditorPanel'
+import { SketchNodePalette }    from './components/sketch/SketchNodePalette'
+import { SketchPreviewPanel }   from './components/sketch/SketchPreviewPanel'
+import { SketchCodePanel }      from './components/sketch/SketchCodePanel'
+import { useCodegen }           from './hooks/useCodegen'
+import { useSketchCodegen }     from './hooks/useSketchCodegen'
+import { useAutoRender }        from './hooks/useAutoRender'
 import { useAutoSave, loadSavedProject } from './hooks/useAutoSave'
-import { useEditorStore }  from './store/editorStore'
+import { useEditorStore }       from './store/editorStore'
 
 function CollapsedSideLabel({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -43,6 +48,7 @@ function CollapsedBottomLabel({ label, onClick }: { label: string; onClick: () =
 
 function AppInner() {
   useCodegen()
+  useSketchCodegen()
   const { doRender } = useAutoRender()
 
   const paletteRef = usePanelRef()
@@ -54,6 +60,13 @@ function AppInner() {
   const [codeCollapsed, setCodeCollapsed]       = useState(false)
 
   const showParametersPanel = useEditorStore((s) => s.showParametersPanel)
+  const tabs = useEditorStore((s) => s.tabs)
+  const activeTabId = useEditorStore((s) => s.activeTabId)
+
+  const isSketchTab = useMemo(() => {
+    const tab = tabs.find((t) => t.id === activeTabId)
+    return tab?.tabType === 'sketch'
+  }, [tabs, activeTabId])
 
   const codePanelOpen  = useEditorStore((s) => s.codePanelOpen)
   const setCodePanelOpen = useEditorStore((s) => s.setCodePanelOpen)
@@ -107,7 +120,7 @@ function AppInner() {
               {paletteCollapsed ? (
                 <CollapsedSideLabel label="Nodes" onClick={() => paletteRef.current?.expand()} />
               ) : (
-                <NodePalette />
+                isSketchTab ? <SketchNodePalette /> : <NodePalette />
               )}
             </Panel>
 
@@ -116,7 +129,7 @@ function AppInner() {
             {/* Center: canvas + tab bar */}
             <Panel id="editor" defaultSize="58%" minSize="20%">
               <div className="flex flex-col h-full overflow-hidden">
-                {showParametersPanel ? <ParametersPanel /> : <EditorPanel />}
+                {showParametersPanel ? <ParametersPanel /> : (isSketchTab ? <SketchEditorPanel /> : <EditorPanel />)}
                 <TabBar />
               </div>
             </Panel>
@@ -136,7 +149,7 @@ function AppInner() {
               {previewCollapsed ? (
                 <CollapsedSideLabel label="Preview" onClick={() => previewRef.current?.expand()} />
               ) : (
-                <PreviewPanel />
+                isSketchTab ? <SketchPreviewPanel /> : <PreviewPanel />
               )}
             </Panel>
           </Group>
@@ -155,9 +168,9 @@ function AppInner() {
           onResize={onCodeResize}
         >
           {codeCollapsed ? (
-            <CollapsedBottomLabel label="Generated OpenSCAD" onClick={() => codeRef.current?.expand()} />
+            <CollapsedBottomLabel label={isSketchTab ? 'Generated Maker.js' : 'Generated OpenSCAD'} onClick={() => codeRef.current?.expand()} />
           ) : (
-            <CodePanel />
+            isSketchTab ? <SketchCodePanel /> : <CodePanel />
           )}
         </Panel>
       </Group>

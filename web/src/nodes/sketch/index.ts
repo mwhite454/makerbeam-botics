@@ -14,6 +14,8 @@ import { SketchTranslateNode, SketchRotateNode, SketchScaleNode, SketchMirrorNod
 import { SketchOffsetNode } from './modifiers/SketchOffsetNode'
 import { SketchExpressionNode } from './control/SketchExpressionNode'
 import { GroupNode }         from '../GroupNode'
+import { PathNode } from './path/PathNode'
+import { PathLayoutNode } from './path/PathLayoutNode'
 
 export const sketchNodeTypes: NodeTypes = {
   // Primitives
@@ -40,6 +42,8 @@ export const sketchNodeTypes: NodeTypes = {
 
   // Control
   sketch_expression: SketchExpressionNode,
+  sketch_path: PathNode,
+  sketch_path_layout: PathLayoutNode,
 
   // Visual groups (Node Wrangler)
   group_node: GroupNode,

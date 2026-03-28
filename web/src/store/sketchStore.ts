@@ -39,6 +39,9 @@ interface SketchEditorState {
   codePanelOpen: boolean
   toggleCodePanel: () => void
   setCodePanelOpen: (open: boolean) => void
+  // ── Tool modes
+  addAnchorMode: boolean
+  toggleAddAnchorMode: () => void
 
   // ── Save/load ───────────────────────────────────────────────────────────────
   exportProject: () => string
@@ -145,6 +148,9 @@ export const useSketchStore = create<SketchEditorState>()(
     codePanelOpen: true,
     toggleCodePanel: () => set((state) => { state.codePanelOpen = !state.codePanelOpen }),
     setCodePanelOpen: (open) => set((state) => { state.codePanelOpen = open }),
+    // tool modes
+    addAnchorMode: false,
+    toggleAddAnchorMode: () => set((state) => { state.addAnchorMode = !state.addAnchorMode }),
 
     // ── Save / load ─────────────────────────────────────────────────────────
     exportProject: () => {

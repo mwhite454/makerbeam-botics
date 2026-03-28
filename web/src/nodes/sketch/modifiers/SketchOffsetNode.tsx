@@ -1,11 +1,11 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, NumberInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchOffsetData } from '@/types/sketchNodes'
-import { useSketchStore } from '@/store/sketchStore'
+import { useEditorStore } from '@/store/editorStore'
 
 export function SketchOffsetNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchOffsetData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -15,7 +15,7 @@ export function SketchOffsetNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'shape' }, { id: 'in-1', label: 'dist' }]}
     >
-      <NumberInput label="distance" value={d.distance} step={0.5} onChange={(v) => update(id, { distance: v })} />
+      <ExpressionInput label="distance" value={d.distance} step={0.5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { distance: v })} />
     </SketchBaseNode>
   )
 }

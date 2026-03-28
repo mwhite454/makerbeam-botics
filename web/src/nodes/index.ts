@@ -9,6 +9,7 @@ import { CircleNode }       from './primitives2d/CircleNode'
 import { SquareNode }       from './primitives2d/SquareNode'
 import { PolygonNode }      from './primitives2d/PolygonNode'
 import { ScadTextNode }     from './primitives2d/TextNode'
+import { SketchProfileNode } from './primitives2d/SketchProfileNode'
 
 import { TranslateNode }    from './transforms/TranslateNode'
 import { RotateNode }       from './transforms/RotateNode'
@@ -37,6 +38,7 @@ import { AssertNode }       from './control/AssertNode'
 import { ParameterNode, ParameterListNode } from './control/ParameterNode'
 import { ModuleCallNode }   from './control/ModuleCallNode'
 import { ModuleArgNode }    from './control/ModuleArgNode'
+import { LoopVarNode }     from './control/LoopVarNode'
 import { ExpressionNode }   from './control/ExpressionNode'
 
 import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
@@ -57,6 +59,7 @@ export const nodeTypes: NodeTypes = {
   square:           SquareNode,
   polygon:          PolygonNode,
   scadtext:         ScadTextNode,
+  sketch_profile:   SketchProfileNode,
 
   // Transforms
   translate:        TranslateNode,
@@ -94,6 +97,7 @@ export const nodeTypes: NodeTypes = {
   parameter_list:   ParameterListNode,
   module_call:      ModuleCallNode,
   module_arg:       ModuleArgNode,
+  loop_var:         LoopVarNode,
   expression_node:  ExpressionNode,
 
   // Import

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { useSketchStore } from '@/store/sketchStore'
+import { useEditorStore } from '@/store/editorStore'
 
 type SketchPreviewMode = '2d' | '3d'
 
@@ -273,7 +273,7 @@ function Svg3DViewer({ svg }: { svg: string }) {
 // ─── Main Sketch Preview Panel ────────────────────────────────────────────────
 
 export function SketchPreviewPanel() {
-  const previewSvg = useSketchStore((s) => s.previewSvg)
+  const previewSvg = useEditorStore((s) => s.sketchPreviewSvg)
   const [mode, setMode] = useState<SketchPreviewMode>('2d')
 
   return (

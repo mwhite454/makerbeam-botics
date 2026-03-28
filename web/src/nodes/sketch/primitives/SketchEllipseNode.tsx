@@ -1,11 +1,11 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, NumberInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchEllipseData } from '@/types/sketchNodes'
-import { useSketchStore } from '@/store/sketchStore'
+import { useEditorStore } from '@/store/editorStore'
 
 export function SketchEllipseNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchEllipseData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -15,8 +15,8 @@ export function SketchEllipseNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'rx' }, { id: 'in-1', label: 'ry' }]}
     >
-      <NumberInput label="rx" value={d.rx} step={1} min={0} onChange={(v) => update(id, { rx: v })} />
-      <NumberInput label="ry" value={d.ry} step={1} min={0} onChange={(v) => update(id, { ry: v })} />
+      <ExpressionInput label="rx" value={d.rx} step={1} min={0} nodeId={id} handleId="in-0" onChange={(v) => update(id, { rx: v })} />
+      <ExpressionInput label="ry" value={d.ry} step={1} min={0} nodeId={id} handleId="in-1" onChange={(v) => update(id, { ry: v })} />
     </SketchBaseNode>
   )
 }

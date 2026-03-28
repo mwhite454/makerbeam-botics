@@ -98,7 +98,7 @@ export function ColorNode({ id, data, selected }: NodeProps) {
       <NumberInput label="R" value={parseFloat(d.r.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => setRgb(v, d.g, d.b)} />
       <NumberInput label="G" value={parseFloat(d.g.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => setRgb(d.r, v, d.b)} />
       <NumberInput label="B" value={parseFloat(d.b.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => setRgb(d.r, d.g, v)} />
-      <NumberInput label="A" value={parseFloat(d.alpha.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => update(id, { alpha: clampUnit(v) })} />
+      <NumberInput label="A" value={parseFloat(Number(d.alpha).toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => update(id, { alpha: clampUnit(v) })} />
 
       <div className="text-[10px] text-gray-500 leading-snug">
         Colors can be hex (`#RRGGBB`) or a variable via `color` input.

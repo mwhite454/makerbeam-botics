@@ -78,18 +78,6 @@ export function Toolbar({ onRender }: ToolbarProps) {
       {/* Separator */}
       <div className="w-px h-5 bg-gray-700" />
 
-      {/* Sketch Mode link */}
-      <a
-        href="/sketch"
-        className="text-[11px] text-pink-400 hover:text-pink-300 transition-colors px-2 py-1 rounded hover:bg-gray-800 font-medium"
-        title="Open 2D Sketch Editor"
-      >
-        Sketch →
-      </a>
-
-      {/* Separator */}
-      <div className="w-px h-5 bg-gray-700" />
-
       {/* Save/Load */}
       <button
         className="text-[11px] text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"

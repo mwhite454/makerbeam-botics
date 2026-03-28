@@ -19,7 +19,7 @@ export function ModuleCallNode({ id, data, selected }: NodeProps) {
   const moduleNames = useMemo(
     () =>
       tabs
-        .filter((t) => t.isModule)
+        .filter((t) => t.tabType === 'module')
         .map((t) => t.moduleName)
         .filter((name) => name.trim().length > 0),
     [tabs],
@@ -102,10 +102,10 @@ export function ModuleCallNode({ id, data, selected }: NodeProps) {
   }
 
   const handleCreateModule = () => {
-    const name = `module_${tabs.filter((t) => t.isModule).length + 1}`
+    const name = `module_${tabs.filter((t) => t.tabType === 'module').length + 1}`
     // Set moduleName BEFORE addTab so it's saved with the current tab
     update(id, { moduleName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_') })
-    addTab(name, true)
+    addTab(name, 'module')
   }
 
   return (

@@ -1,5 +1,5 @@
 import { type NodeProps } from '@xyflow/react'
-import { BaseNode, TextInput, NumberInput, CheckboxInput, SelectInput, VectorInput } from '../BaseNode'
+import { BaseNode, TextInput, ExpressionInput, CheckboxInput, SelectInput, VectorInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
 import type { ModuleArgData } from '@/types/nodes'
 
@@ -56,9 +56,9 @@ function DefaultValueInput({
   switch (dataType) {
     case 'number':
       return (
-        <NumberInput
+        <ExpressionInput
           label="default"
-          value={parseFloat(value) || 0}
+          value={value}
           onChange={(v) => onChange(String(v))}
         />
       )

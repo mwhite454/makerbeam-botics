@@ -1,11 +1,11 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, NumberInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchArcData } from '@/types/sketchNodes'
-import { useSketchStore } from '@/store/sketchStore'
+import { useEditorStore } from '@/store/editorStore'
 
 export function SketchArcNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchArcData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -15,9 +15,9 @@ export function SketchArcNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'r' }, { id: 'in-1', label: 'start' }, { id: 'in-2', label: 'end' }]}
     >
-      <NumberInput label="radius" value={d.radius} step={1} min={0} onChange={(v) => update(id, { radius: v })} />
-      <NumberInput label="start°" value={d.startAngle} step={5} onChange={(v) => update(id, { startAngle: v })} />
-      <NumberInput label="end°" value={d.endAngle} step={5} onChange={(v) => update(id, { endAngle: v })} />
+      <ExpressionInput label="radius" value={d.radius} step={1} min={0} nodeId={id} handleId="in-0" onChange={(v) => update(id, { radius: v })} />
+      <ExpressionInput label="start°" value={d.startAngle} step={5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { startAngle: v })} />
+      <ExpressionInput label="end°" value={d.endAngle} step={5} nodeId={id} handleId="in-2" onChange={(v) => update(id, { endAngle: v })} />
     </SketchBaseNode>
   )
 }

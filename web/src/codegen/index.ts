@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/react'
 import { MAKERBEAM_PREAMBLE } from './makerbeamPreamble'
-import type { GlobalParameter } from '@/store/editorStore'
+import type { GlobalParameter, EditorTab } from '@/store/editorStore'
+import { sketchToOpenscad } from './sketchToOpenscad'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,16 @@ function num(v: unknown): number {
   return typeof v === 'number' ? v : parseFloat(String(v)) || 0
 }
 
+// Returns a string suitable as an OpenSCAD expression fallback.
+// Preserves string values (e.g. 'i', 'i*2', 'width/2') instead of
+// coercing them to 0 the way num() would.
+function expr(v: unknown): string {
+  if (typeof v === 'number') return String(v)
+  const s = String(v ?? '0').trim()
+  if (s === '') return '0'
+  return s
+}
+
 function escapeString(v: unknown): string {
   return String(v ?? '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
@@ -65,7 +76,9 @@ function emitNode(
   childrenOf: Map<string, ChildRef[]>,
   visiting: Set<string>,
   visited: Set<string>,
-  indent: number
+  indent: number,
+  tabs?: EditorTab[],
+  globalParameters?: GlobalParameter[],
 ): string {
   if (visiting.has(nodeId)) return indentStr(indent) + '// ERROR: cycle detected\n'
   if (visited.has(nodeId)) {
@@ -89,7 +102,7 @@ function emitNode(
   function getChild(index: number): string {
     const child = children.find((c) => c.handleIndex === index)
     if (!child) return ''  // no child connected — will be handled by caller
-    return emitNode(child.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
+    return emitNode(child.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters)
   }
 
   function getChildRef(index: number): ChildRef | undefined {
@@ -105,7 +118,7 @@ function emitNode(
       return pad + '  // No children connected\n'
     }
     return children.map((c) =>
-      emitNode(c.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
+      emitNode(c.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters)
     ).join('')
   }
 
@@ -132,6 +145,7 @@ function emitNode(
       case 'parameter_list':
       case 'var_node':
       case 'module_arg':
+      case 'loop_var':
         return asIdentifier(valueData.varName ?? valueData.argName)
       case 'expression_node':
         return resolveExpressionNode(valueData)
@@ -153,27 +167,27 @@ function emitNode(
   switch (node.type) {
     // ── 3D Primitives ─────────────────────────────────────────────────────────
     case 'sphere': {
-      const radiusExpr = resolveValueInput(0, String(num(d.r)))
-      const fnExpr = resolveValueInput(1, String(num(d.fn)))
+      const radiusExpr = resolveValueInput(0, expr(d.r))
+      const fnExpr = resolveValueInput(1, expr(d.fn))
       result = `${pad}sphere(r = ${radiusExpr}, $fn = ${fnExpr});\n`
       break
     }
 
     case 'cube': {
-      const xExpr = resolveValueInput(0, String(num(d.x)))
-      const yExpr = resolveValueInput(1, String(num(d.y)))
-      const zExpr = resolveValueInput(2, String(num(d.z)))
+      const xExpr = resolveValueInput(0, expr(d.x))
+      const yExpr = resolveValueInput(1, expr(d.y))
+      const zExpr = resolveValueInput(2, expr(d.z))
       const centerExpr = resolveValueInput(3, bool(d.center))
       result = `${pad}cube([${xExpr}, ${yExpr}, ${zExpr}], center = ${centerExpr});\n`
       break
     }
 
     case 'cylinder': {
-      const hExpr = resolveValueInput(0, String(num(d.h)))
-      const r1Expr = resolveValueInput(1, String(num(d.r1)))
-      const r2Expr = resolveValueInput(2, String(num(d.r2)))
+      const hExpr = resolveValueInput(0, expr(d.h))
+      const r1Expr = resolveValueInput(1, expr(d.r1))
+      const r2Expr = resolveValueInput(2, expr(d.r2))
       const centerExpr = resolveValueInput(3, bool(d.center))
-      const fnExpr = resolveValueInput(4, String(num(d.fn)))
+      const fnExpr = resolveValueInput(4, expr(d.fn))
       result = `${pad}cylinder(h = ${hExpr}, r1 = ${r1Expr}, r2 = ${r2Expr}, center = ${centerExpr}, $fn = ${fnExpr});\n`
       break
     }
@@ -187,15 +201,15 @@ function emitNode(
 
     // ── 2D Primitives ─────────────────────────────────────────────────────────
     case 'circle': {
-      const rExpr = resolveValueInput(0, String(num(d.r)))
-      const fnExpr = resolveValueInput(1, String(num(d.fn)))
+      const rExpr = resolveValueInput(0, expr(d.r))
+      const fnExpr = resolveValueInput(1, expr(d.fn))
       result = `${pad}circle(r = ${rExpr}, $fn = ${fnExpr});\n`
       break
     }
 
     case 'square': {
-      const xExpr = resolveValueInput(0, String(num(d.x)))
-      const yExpr = resolveValueInput(1, String(num(d.y)))
+      const xExpr = resolveValueInput(0, expr(d.x))
+      const yExpr = resolveValueInput(1, expr(d.y))
       const centerExpr = resolveValueInput(2, bool(d.center))
       result = `${pad}square([${xExpr}, ${yExpr}], center = ${centerExpr});\n`
       break
@@ -206,48 +220,71 @@ function emitNode(
       break
 
     case 'scadtext': {
-      const sizeExpr = resolveValueInput(0, String(num(d.size)))
+      const sizeExpr = resolveValueInput(0, expr(d.size))
       result = `${pad}text("${d.text}", size = ${sizeExpr}, font = "${d.font}", halign = "${d.halign}", valign = "${d.valign}");\n`
+      break
+    }
+
+    case 'sketch_profile': {
+      const sketchName = String(d.sketchName || '')
+      if (!sketchName || !tabs) {
+        result = `${pad}// sketch_profile: no sketch selected\n`
+        break
+      }
+      const sketchTab = tabs.find((t) => t.tabType === 'sketch' && t.sketchName === sketchName)
+      if (!sketchTab) {
+        result = `${pad}// sketch_profile: sketch "${sketchName}" not found\n`
+        break
+      }
+      // Generate polygon code from the sketch tab's nodes/edges
+      const sketchCode = sketchToOpenscad(sketchTab.nodes, sketchTab.edges, globalParameters ?? [])
+      // Indent the sketch code to match current indentation
+      const indented = sketchCode
+        .split('\n')
+        .map((line) => (line.trim() ? pad + line : ''))
+        .filter(Boolean)
+        .join('\n')
+      result = indented + '\n'
       break
     }
 
     // ── Transforms ────────────────────────────────────────────────────────────
     case 'translate': {
-      const xExpr = resolveValueInput(1, String(num(d.x)))
-      const yExpr = resolveValueInput(2, String(num(d.y)))
-      const zExpr = resolveValueInput(3, String(num(d.z)))
+      const xExpr = resolveValueInput(1, expr(d.x))
+      const yExpr = resolveValueInput(2, expr(d.y))
+      const zExpr = resolveValueInput(3, expr(d.z))
       result = emitTransform(`translate([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
     }
 
     case 'rotate': {
-      const xExpr = resolveValueInput(1, String(num(d.x)))
-      const yExpr = resolveValueInput(2, String(num(d.y)))
-      const zExpr = resolveValueInput(3, String(num(d.z)))
+      const xExpr = resolveValueInput(1, expr(d.x))
+      const yExpr = resolveValueInput(2, expr(d.y))
+      const zExpr = resolveValueInput(3, expr(d.z))
       result = emitTransform(`rotate([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
     }
 
     case 'scale': {
-      const xExpr = resolveValueInput(1, String(num(d.x)))
-      const yExpr = resolveValueInput(2, String(num(d.y)))
-      const zExpr = resolveValueInput(3, String(num(d.z)))
+      const xExpr = resolveValueInput(1, expr(d.x))
+      const yExpr = resolveValueInput(2, expr(d.y))
+      const zExpr = resolveValueInput(3, expr(d.z))
       result = emitTransform(`scale([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
     }
 
     case 'mirror': {
-      const xExpr = resolveValueInput(1, String(num(d.x)))
-      const yExpr = resolveValueInput(2, String(num(d.y)))
-      const zExpr = resolveValueInput(3, String(num(d.z)))
+      const xExpr = resolveValueInput(1, expr(d.x))
+      const yExpr = resolveValueInput(2, expr(d.y))
+      const zExpr = resolveValueInput(3, expr(d.z))
       result = emitTransform(`mirror([${xExpr}, ${yExpr}, ${zExpr}])`)
       break
     }
 
     case 'resize': {
-      const xExpr = resolveValueInput(1, String(num(d.x)))
-      const yExpr = resolveValueInput(2, String(num(d.y)))
-      const zExpr = resolveValueInput(3, String(num(d.z)))
+      const xExpr = resolveValueInput(1, expr(d.x))
+      const yExpr = resolveValueInput(2, expr(d.y))
+      const zExpr = resolveValueInput(3, expr(d.z))
       const autoExpr = resolveValueInput(4, bool(d.auto))
       result = emitTransform(`resize([${xExpr}, ${yExpr}, ${zExpr}], auto = ${autoExpr})`)
       break
@@ -261,10 +298,10 @@ function emitNode(
 
     case 'offset':
       if (d.useR) {
-        const rExpr = resolveValueInput(1, String(num(d.r)))
+        const rExpr = resolveValueInput(1, expr(d.r))
         result = emitTransform(`offset(r = ${rExpr})`)
       } else {
-        const deltaExpr = resolveValueInput(2, String(num(d.delta)))
+        const deltaExpr = resolveValueInput(2, expr(d.delta))
         const chamferExpr = resolveValueInput(3, bool(d.chamfer))
         result = emitTransform(`offset(delta = ${deltaExpr}, chamfer = ${chamferExpr})`)
       }
@@ -285,11 +322,11 @@ function emitNode(
 
     // ── Extrusions ────────────────────────────────────────────────────────────
     case 'linear_extrude': {
-      const heightExpr = resolveValueInput(1, String(num(d.height)))
-      const twistExpr = resolveValueInput(2, String(num(d.twist)))
-      const slicesExpr = resolveValueInput(3, String(num(d.slices)))
-      const scaleExpr = resolveValueInput(4, String(num(d.scale)))
-      const fnExpr = resolveValueInput(5, String(num(d.fn)))
+      const heightExpr = resolveValueInput(1, expr(d.height))
+      const twistExpr = resolveValueInput(2, expr(d.twist))
+      const slicesExpr = resolveValueInput(3, expr(d.slices))
+      const scaleExpr = resolveValueInput(4, expr(d.scale))
+      const fnExpr = resolveValueInput(5, expr(d.fn))
       const centerExpr = resolveValueInput(6, bool(d.center))
 
       const parts = [`height = ${heightExpr}`, `center = ${centerExpr}`]
@@ -302,8 +339,8 @@ function emitNode(
     }
 
     case 'rotate_extrude': {
-      const angleExpr = resolveValueInput(1, String(num(d.angle)))
-      const fnExpr = resolveValueInput(2, String(num(d.fn)))
+      const angleExpr = resolveValueInput(1, expr(d.angle))
+      const fnExpr = resolveValueInput(2, expr(d.fn))
       const parts = [`angle = ${angleExpr}`]
       if (num(d.fn) > 0 || fnExpr !== String(num(d.fn))) parts.push(`$fn = ${fnExpr}`)
       result = emitTransform(`rotate_extrude(${parts.join(', ')})`)
@@ -326,7 +363,7 @@ function emitNode(
         ? `"${hex}"`
         : `[${num(d.r)}, ${num(d.g)}, ${num(d.b)}]`
       const colorExpr = resolveValueInput(1, hexFallback)
-      const alphaExpr = resolveValueInput(2, String(num(d.alpha)))
+      const alphaExpr = resolveValueInput(2, expr(d.alpha))
       result = emitTransform(`color(${colorExpr}, ${alphaExpr})`)
       break
     }
@@ -339,11 +376,16 @@ function emitNode(
 
     // ── Control / Math / Import ───────────────────────────────────────────────
     case 'for_loop': {
-      const varName = d.varName || 'i'
-      const start = resolveValueInput(1, String(num(d.start)))
-      const end   = resolveValueInput(2, String(num(d.end)))
-      const step  = resolveValueInput(3, String(num(d.step) || 1))
-      if (!hasChild(0)) {
+      const varName = sanitizeIdentifier(d.varName || 'i')
+      const start = resolveValueInput(1, expr(d.start))
+      const end   = resolveValueInput(2, expr(d.end))
+      const step  = resolveValueInput(3, expr(d.step) || '1')
+      if (d.bodyTabId) {
+        // New: delegate body to a linked loop body module tab
+        const bodyTab = tabs?.find((t) => t.id === String(d.bodyTabId))
+        const bodyModuleName = bodyTab ? sanitizeIdentifier(bodyTab.moduleName, 'for_body') : 'for_body'
+        result = `${pad}for (${varName} = [${start} : ${step} : ${end}])\n${pad}  ${bodyModuleName}(${varName});\n`
+      } else if (!hasChild(0)) {
         result = `${pad}// for loop: no child connected\n`
       } else {
         result = `${pad}for (${varName} = [${start} : ${step} : ${end}])\n${getChild(0)}`
@@ -369,9 +411,9 @@ function emitNode(
 
     case 'intersection_for': {
       const varName = d.varName || 'i'
-      const start = resolveValueInput(1, String(num(d.start)))
-      const end   = resolveValueInput(2, String(num(d.end)))
-      const step  = resolveValueInput(3, String(num(d.step) || 1))
+      const start = resolveValueInput(1, expr(d.start))
+      const end   = resolveValueInput(2, expr(d.end))
+      const step  = resolveValueInput(3, expr(d.step) || '1')
       if (!hasChild(0)) {
         result = `${pad}// intersection_for: no child connected\n`
       } else {
@@ -447,6 +489,12 @@ function emitNode(
       break
     }
 
+    case 'loop_var': {
+      // Loop var is emitted in the loop body module signature, not as a body statement
+      result = ''
+      break
+    }
+
     case 'module_call': {
       const moduleName = sanitizeIdentifier(d.moduleName || '', 'module')
       const argValues = (d.argValues as Record<string, string> | undefined) ?? {}
@@ -497,7 +545,7 @@ function emitNode(
         } else {
           result = `${pad}${callHead} {\n`
           for (const gc of geomChildren) {
-            result += emitNode(gc.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
+            result += emitNode(gc.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters)
           }
           result += `${pad}}\n`
         }
@@ -508,7 +556,7 @@ function emitNode(
         } else {
           result = `${pad}${callHead} {\n`
           for (const gc of geomChildren) {
-            result += emitNode(gc.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2)
+            result += emitNode(gc.nodeId, nodesMap, childrenOf, visiting, visited, indent + 2, tabs, globalParameters)
           }
           result += `${pad}}\n`
         }
@@ -555,7 +603,7 @@ function emitGlobalParameter(p: GlobalParameter): string {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: GlobalParameter[]): string {
+export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: GlobalParameter[], tabs?: EditorTab[]): string {
   // Filter out group nodes (visual-only, no codegen impact)
   const codeNodes = nodes.filter((n) => n.type !== 'group_node')
   if (codeNodes.length === 0 && (!globalParameters || globalParameters.length === 0)) return '// Add nodes to the canvas to generate code\n'
@@ -586,7 +634,7 @@ export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: Gl
   for (const node of nodes) {
     if (node.type === 'parameter_node' || node.type === 'parameter_list' || node.type === 'var_node') {
       if (!visited.has(node.id)) {
-        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0)
+        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters)
       }
     }
   }
@@ -595,13 +643,13 @@ export function generateCode(nodes: Node[], edges: Edge[], globalParameters?: Gl
     code += '// WARNING: No root nodes found (possible cycle in entire graph)\n'
     for (const node of nodes) {
       if (!visited.has(node.id)) {
-        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0)
+        code += emitNode(node.id, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters)
       }
     }
   } else {
     for (const rootId of roots) {
       if (!visited.has(rootId)) {
-        code += emitNode(rootId, nodesMap, childrenOf, new Set(), visited, 0)
+        code += emitNode(rootId, nodesMap, childrenOf, new Set(), visited, 0, tabs, globalParameters)
       }
     }
   }
@@ -641,6 +689,31 @@ export function generateModuleCode(moduleName: string, nodes: Node[], edges: Edg
   // Filter out module_arg nodes from body generation (they go in signature)
   const bodyNodes = nodes.filter((n) => n.type !== 'module_arg')
   if (bodyNodes.length === 0) return `${signature} {\n  // Empty module\n}\n`
+
+  const innerCode = generateCode(bodyNodes, edges)
+  const indented = innerCode
+    .split('\n')
+    .map((line) => (line.trim() ? '  ' + line : line))
+    .join('\n')
+
+  return `${signature} {\n${indented}}\n`
+}
+
+// ─── Loop body code generation ────────────────────────────────────────────────
+
+export function generateLoopBodyCode(moduleName: string, nodes: Node[], edges: Edge[]): string {
+  // Extract loop_var nodes for the module signature
+  const varNodes = nodes.filter((n) => n.type === 'loop_var')
+  const varParts = varNodes.map((n) => {
+    const d = n.data as Record<string, unknown>
+    return sanitizeIdentifier(String(d.varName || 'i'), 'i')
+  })
+  const safeModuleName = sanitizeIdentifier(moduleName, 'for_body')
+  const signature = `module ${safeModuleName}(${varParts.join(', ')})`
+
+  // Filter out loop_var nodes from body (they go in signature)
+  const bodyNodes = nodes.filter((n) => n.type !== 'loop_var')
+  if (bodyNodes.length === 0) return `${signature} {\n  // Empty loop body\n}\n`
 
   const innerCode = generateCode(bodyNodes, edges)
   const indented = innerCode

@@ -32,9 +32,11 @@ export function useAutoRender() {
     const isStale = () => requestSeq !== renderSeqRef.current
 
     setRenderStatus('rendering')
+    const renderStart = performance.now()
     try {
       const data = await render(code, effectiveMode)
       if (isStale()) return
+      console.log(`[Botics] wasm render: ${(performance.now() - renderStart).toFixed(0)}ms, format=${effectiveMode}`)
       if (effectiveMode === 'stl') {
         setRenderResultSTL(data)
       } else if (effectiveMode === 'png') {

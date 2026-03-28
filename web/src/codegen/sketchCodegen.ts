@@ -1,5 +1,6 @@
 import type { Node, Edge } from '@xyflow/react'
 import makerjs from 'makerjs'
+import { layoutAlongPath } from '@/utils/layoutAlongPath'
 import type { GlobalParameter } from '@/store/editorStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -46,6 +47,16 @@ function evaluateNumericExpression(expr: string, params: Record<string, string>,
   } catch {
     return fallback
   }
+}
+
+function resolveExpr(v: unknown, params: Record<string, string>, fallback: number): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : fallback
+  if (typeof v === 'string') {
+    const n = Number(v)
+    if (!isNaN(n)) return n
+    return evaluateNumericExpression(v, params, fallback)
+  }
+  return fallback
 }
 
 // ─── Helper: build adjacency maps ─────────────────────────────────────────────
@@ -122,9 +133,9 @@ function buildModel(
   switch (node.type) {
     // ── Primitives ────────────────────────────────────────────────────────
     case 'sketch_rectangle': {
-      const w = getNumericValueInput(0, Number(d.width) || 1)
-      const h = getNumericValueInput(1, Number(d.height) || 1)
-      const cr = getNumericValueInput(2, Number(d.cornerRadius) || 0)
+      const w = getNumericValueInput(0, resolveExpr(d.width, paramValues, 1))
+      const h = getNumericValueInput(1, resolveExpr(d.height, paramValues, 1))
+      const cr = getNumericValueInput(2, resolveExpr(d.cornerRadius, paramValues, 0))
       if (cr > 0) {
         model = makerjs.model.center(
           new makerjs.models.RoundRectangle(w, h, cr),
@@ -140,8 +151,8 @@ function buildModel(
     }
 
     case 'sketch_circle': {
-      const r = getNumericValueInput(0, Number(d.radius) || 1)
-      const segs = getNumericValueInput(1, Number(d.segments) || 0)
+      const r = getNumericValueInput(0, resolveExpr(d.radius, paramValues, 1))
+      const segs = getNumericValueInput(1, resolveExpr(d.segments, paramValues, 0))
       if (segs > 2) {
         model = new makerjs.models.Polygon(segs, r)
       } else {
@@ -151,8 +162,8 @@ function buildModel(
     }
 
     case 'sketch_ngon': {
-      const sides = Math.max(3, Math.round(getNumericValueInput(0, Number(d.sides) || 6)))
-      const radius = getNumericValueInput(1, Number(d.radius) || 1)
+      const sides = Math.max(3, Math.round(getNumericValueInput(0, resolveExpr(d.sides, paramValues, 6))))
+      const radius = getNumericValueInput(1, resolveExpr(d.radius, paramValues, 1))
       const inscribed = d.inscribed !== false
       if (inscribed) {
         model = new makerjs.models.Polygon(sides, radius)
@@ -177,17 +188,100 @@ function buildModel(
       break
     }
 
+    case 'sketch_path': {
+      // Anchors stored as JSON array of {id,pos:[x,y],...}
+      try {
+        const anchors = JSON.parse(String(d.anchorsJson || '[]')) as Array<{ pos: number[] }>
+        const pts = anchors.map((a) => a.pos)
+        if (pts.length >= 2) {
+          model = new makerjs.models.ConnectTheDots(d.closed === true, pts)
+        }
+      } catch {
+        // ignore parse errors
+      }
+      break
+    }
+
+    case 'sketch_path_layout': {
+      // Build instances of the template along the provided path anchors
+      // Template is child handle 0, path is child handle 1 (or path data may be inline)
+      const tpl = getChildModel(0)
+      // Try to read anchors from connected path node if present
+      let anchors: number[][] = []
+      const pathChild = children.find((c) => c.handleIndex === 1)
+      if (pathChild) {
+        const pathNode = nodesMap.get(pathChild.nodeId)
+        if (pathNode) {
+          try {
+            const pd = pathNode.data as Record<string, unknown>
+            const a = JSON.parse(String(pd.anchorsJson || '[]')) as Array<{ pos: number[] }>
+            anchors = a.map((it) => it.pos)
+          } catch {
+            anchors = []
+          }
+        }
+      }
+
+      // Fallback: inline anchors on this node
+      if (anchors.length === 0) {
+        try {
+          const a = JSON.parse(String(d.anchorsJson || '[]')) as Array<{ pos: number[] }>
+          anchors = a.map((it) => it.pos)
+        } catch {
+          anchors = []
+        }
+      }
+
+      if (!tpl || anchors.length === 0) {
+        model = tpl
+        break
+      }
+
+      // Construct a lightweight Path object for the layout util
+      const pathObj = { anchors: anchors.map((p) => ({ pos: { x: p[0], y: p[1] } })), segments: [], closed: d.closed === true }
+      const opts = {
+        mode: (d.mode as any) || 'count',
+        count: Number(d.count) || 1,
+        distance: Number(d.distance) || 10,
+        orientation: (d.orientation as any) || 'tangent',
+        align: (d.align as any) || 'center',
+        offset: Number(d.offset) || 0,
+      }
+
+      const layout = layoutAlongPath(pathObj as any, opts as any)
+
+      // Create combined model of clones
+      const combined: makerjs.IModel = { models: {} }
+      layout.transforms.forEach((t, i) => {
+        const instName = `inst_${i}`
+        // Deep clone the template model
+        const clone = JSON.parse(JSON.stringify(tpl)) as makerjs.IModel
+        // Apply rotation (convert radians to degrees) and translation
+        const deg = (t.rotation || 0) * (180 / Math.PI)
+        try {
+          makerjs.model.rotate(clone, deg)
+        } catch {}
+        try {
+          makerjs.model.moveRelative(clone, [t.x || 0, t.y || 0])
+        } catch {}
+        combined.models![instName] = clone
+      })
+
+      model = combined
+      break
+    }
+
     case 'sketch_arc': {
-      const r = getNumericValueInput(0, Number(d.radius) || 1)
-      const startA = getNumericValueInput(1, Number(d.startAngle) || 0)
-      const endA = getNumericValueInput(2, Number(d.endAngle) || 180)
+      const r = getNumericValueInput(0, resolveExpr(d.radius, paramValues, 1))
+      const startA = getNumericValueInput(1, resolveExpr(d.startAngle, paramValues, 0))
+      const endA = getNumericValueInput(2, resolveExpr(d.endAngle, paramValues, 180))
       model = { paths: { arc: new makerjs.paths.Arc([0, 0], r, startA, endA) } }
       break
     }
 
     case 'sketch_ellipse': {
-      const rx = getNumericValueInput(0, Number(d.rx) || 1)
-      const ry = getNumericValueInput(1, Number(d.ry) || 1)
+      const rx = getNumericValueInput(0, resolveExpr(d.rx, paramValues, 1))
+      const ry = getNumericValueInput(1, resolveExpr(d.ry, paramValues, 1))
       model = new makerjs.models.Ellipse(rx, ry)
       break
     }
@@ -230,8 +324,8 @@ function buildModel(
     case 'sketch_translate': {
       const child = getChildModel(0)
       if (child) {
-        const tx = getNumericValueInput(1, Number(d.x) || 0)
-        const ty = getNumericValueInput(2, Number(d.y) || 0)
+        const tx = getNumericValueInput(1, resolveExpr(d.x, paramValues, 0))
+        const ty = getNumericValueInput(2, resolveExpr(d.y, paramValues, 0))
         makerjs.model.moveRelative(child, [tx, ty])
         model = child
       }
@@ -241,7 +335,7 @@ function buildModel(
     case 'sketch_rotate': {
       const child = getChildModel(0)
       if (child) {
-        const angle = getNumericValueInput(1, Number(d.angle) || 0)
+        const angle = getNumericValueInput(1, resolveExpr(d.angle, paramValues, 0))
         makerjs.model.rotate(child, angle)
         model = child
       }
@@ -251,8 +345,8 @@ function buildModel(
     case 'sketch_scale': {
       const child = getChildModel(0)
       if (child) {
-        const sx = getNumericValueInput(1, Number(d.x) || 1)
-        const sy = getNumericValueInput(2, Number(d.y) || 1)
+        const sx = getNumericValueInput(1, resolveExpr(d.x, paramValues, 1))
+        const sy = getNumericValueInput(2, resolveExpr(d.y, paramValues, 1))
         model = makerjs.model.distort(child, sx, sy)
       }
       break
@@ -261,7 +355,7 @@ function buildModel(
     case 'sketch_mirror': {
       const child = getChildModel(0)
       if (child) {
-        const angle = getNumericValueInput(1, Number(d.axisAngle) || 0)
+        const angle = getNumericValueInput(1, resolveExpr(d.axisAngle, paramValues, 0))
         makerjs.model.mirror(child, angle === 0 || angle === 180, angle === 90 || angle === 270)
         model = child
       }
@@ -272,7 +366,7 @@ function buildModel(
     case 'sketch_offset': {
       const child = getChildModel(0)
       if (child) {
-        const dist = getNumericValueInput(1, Number(d.distance) || 1)
+        const dist = getNumericValueInput(1, resolveExpr(d.distance, paramValues, 1))
         const expanded = makerjs.model.outline(child, dist)
         model = expanded
       }
@@ -286,6 +380,7 @@ function buildModel(
 
   visiting.delete(nodeId)
   return model
+
 }
 
 // ─── Name helpers ──────────────────────────────────────────────────────────────
@@ -503,6 +598,21 @@ function emitCode(
     case 'sketch_expression': {
       // Value-only helper node; consumed through value-port connections.
       result = ''
+      break
+    }
+
+    case 'sketch_path': {
+      // Emit ConnectTheDots from anchors JSON
+      const anchorsJson = String(d.anchorsJson || '[]')
+      result = `${pad}var ${varName} = new makerjs.models.ConnectTheDots(${d.closed === true}, ${anchorsJson});\n`
+      break
+    }
+
+    case 'sketch_path_layout': {
+      // Layout node: for now, pass through the template child's model.
+      const tpl = getChildCode(0)
+      result = tpl?.code ?? ''
+      result += `${pad}var ${varName} = ${tpl?.varName ?? '{}'};\n`
       break
     }
 

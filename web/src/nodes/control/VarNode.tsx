@@ -1,7 +1,9 @@
 import { type NodeProps } from '@xyflow/react'
 import { BaseNode, CheckboxInput, SelectInput, TextInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
-import type { VarData } from '@/types/nodes'
+
+// Local minimal VarData type to avoid depending on missing export
+type VarData = { varName?: string; dataType?: string; value?: string }
 
 const DATA_TYPES = ['number', 'string', 'boolean', 'vector', 'range', 'list']
 
@@ -20,9 +22,9 @@ export function VarNode({ id, data, selected }: NodeProps) {
   const dataType = d.dataType || 'number'
   return (
     <BaseNode id={id} category="control" label="variable" selected={selected} hasOutput={true}>
-      <TextInput label="name" value={d.varName} onChange={(v) => update(id, { varName: v })} />
-      <SelectInput label="type" value={dataType} options={DATA_TYPES} onChange={(v) => update(id, { dataType: v })} />
-      <ValueWidget dataType={dataType} value={String(d.value ?? '')} onChange={(v) => update(id, { value: v })} />
+      <TextInput label="name" value={d.varName ?? ''} onChange={(v) => update(id, { varName: v } as any)} />
+      <SelectInput label="type" value={dataType} options={DATA_TYPES} onChange={(v) => update(id, { dataType: v } as any)} />
+      <ValueWidget dataType={dataType} value={String(d.value ?? '')} onChange={(v) => update(id, { value: v } as any)} />
     </BaseNode>
   )
 }

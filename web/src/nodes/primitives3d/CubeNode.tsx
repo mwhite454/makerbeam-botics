@@ -1,5 +1,5 @@
 import { type NodeProps } from '@xyflow/react'
-import { BaseNode, VectorInput, CheckboxInput } from '../BaseNode'
+import { BaseNode, ExpressionVectorInput, CheckboxInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
 import type { CubeData } from '@/types/nodes'
 
@@ -19,7 +19,8 @@ export function CubeNode({ id, data, selected }: NodeProps) {
         { id: 'in-3', label: 'center' },
       ]}
     >
-      <VectorInput label="size" value={[d.x, d.y, d.z]} step={0.5}
+      <ExpressionVectorInput label="size" value={[d.x, d.y, d.z]} step={0.5}
+        nodeId={id} handleIds={['in-0', 'in-1', 'in-2']}
         onChange={([x, y, z]) => update(id, { x, y, z })} />
       <CheckboxInput label="center" value={d.center}
         onChange={(v) => update(id, { center: v })} />

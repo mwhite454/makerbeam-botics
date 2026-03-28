@@ -2,7 +2,9 @@ import { type NodeProps } from '@xyflow/react'
 import { useMemo } from 'react'
 import { BaseNode, TextInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
-import type { ParameterData } from '@/types/nodes'
+
+// Lightweight local type to avoid depending on a missing export in types
+type ParameterData = { varName?: string; value?: string; items?: string[] }
 
 interface ParameterListNodeData extends ParameterData {
   items?: string[]
@@ -14,8 +16,8 @@ export function ParameterNode({ id, data, selected }: NodeProps) {
 
   return (
     <BaseNode id={id} category="control" label="parameter" selected={selected}>
-      <TextInput label="name" value={d.varName} onChange={(v) => update(id, { varName: v })} />
-      <TextInput label="value" value={d.value} onChange={(v) => update(id, { value: v })} />
+      <TextInput label="name" value={d.varName ?? ''} onChange={(v) => update(id, { varName: v } as any)} />
+      <TextInput label="value" value={d.value ?? ''} onChange={(v) => update(id, { value: v } as any)} />
     </BaseNode>
   )
 }
@@ -60,7 +62,7 @@ export function ParameterListNode({ id, data, selected }: NodeProps) {
 
   return (
     <BaseNode id={id} category="control" label="parameter_list" selected={selected}>
-      <TextInput label="name" value={d.varName} onChange={(v) => update(id, { varName: v })} />
+      <TextInput label="name" value={d.varName ?? ''} onChange={(v) => update(id, { varName: v } as any)} />
 
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>list values</span>

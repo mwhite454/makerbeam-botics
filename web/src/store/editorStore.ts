@@ -11,6 +11,7 @@ import {
   addEdge,
 } from '@xyflow/react'
 import { AllNodeData } from '@/types/nodes'
+import type { AllSketchNodeData } from '@/types/sketchNodes'
 
 export type RenderStatus = 'idle' | 'rendering' | 'done' | 'error'
 export type PreviewMode  = 'off' | 'stl' | 'png'
@@ -26,23 +27,30 @@ export interface GlobalParameter {
   value: string
 }
 
-// ─── Tab/Module support ───────────────────────────────────────────────────────
+// ─── Tab/Module/Sketch support ────────────────────────────────────────────────
+
+export type TabType = 'main' | 'module' | 'tab' | 'sketch' | 'loop'
 
 export interface EditorTab {
   id: string
   label: string
-  isModule: boolean        // If true, generates a module definition
-  moduleName: string       // OpenSCAD module name (for module tabs)
+  tabType: TabType
+  isModule: boolean        // true for 'module' and 'loop' tabs
+  moduleName: string       // OpenSCAD module name (for module/loop tabs)
+  sketchName: string       // Sketch identifier (for sketch tabs)
   nodes: Node[]
   edges: Edge[]
 }
 
-function createTab(id: string, label: string, isModule = false): EditorTab {
+function createTab(id: string, label: string, tabType: TabType = 'main'): EditorTab {
+  const sanitized = label.toLowerCase().replace(/[^a-z0-9_]/g, '_')
   return {
     id,
     label,
-    isModule,
-    moduleName: isModule ? label.toLowerCase().replace(/[^a-z0-9_]/g, '_') : '',
+    tabType,
+    isModule: tabType === 'module' || tabType === 'loop',
+    moduleName: (tabType === 'module' || tabType === 'loop') ? sanitized : '',
+    sketchName: tabType === 'sketch' ? sanitized : '',
     nodes: [],
     edges: [],
   }
@@ -52,10 +60,11 @@ interface EditorState {
   // ── Tab system ──────────────────────────────────────────────────────────────
   tabs: EditorTab[]
   activeTabId: string
-  addTab: (label: string, isModule: boolean) => string
+  addTab: (label: string, tabType: TabType) => string
   removeTab: (id: string) => void
   renameTab: (id: string, label: string) => void
   setActiveTab: (id: string) => void
+  getActiveTab: () => EditorTab | undefined
 
   // ── React Flow state (delegates to active tab) ─────────────────────────────
   nodes: Node[]
@@ -63,7 +72,9 @@ interface EditorState {
   onNodesChange: OnNodesChange
   onEdgesChange: OnEdgesChange
   onConnect: OnConnect
-  updateNodeData: (id: string, data: Partial<AllNodeData>) => void
+  updateNodeData: (id: string, data: Partial<AllNodeData> | Partial<AllSketchNodeData>) => void
+  updateNodeDataInTab: (tabId: string, nodeId: string, data: Record<string, unknown>) => void
+  propagateForLoopVarName: (forLoopNodeId: string, newVarName: string) => void
   addNode: (node: Node) => void
 
   // ── Node Wrangler (grouping) ───────────────────────────────────────────────
@@ -104,6 +115,12 @@ interface EditorState {
   setPreviewMode: (m: PreviewMode) => void
   setAutoRender: (v: boolean) => void
 
+  // ── Sketch state (for active sketch tab) ──────────────────────────────────
+  sketchPreviewSvg: string
+  setSketchPreviewSvg: (svg: string) => void
+  sketchGeneratedCode: string
+  setSketchGeneratedCode: (code: string) => void
+
   // ── Save/load ───────────────────────────────────────────────────────────────
   exportProject: () => string
   importProject: (json: string) => void
@@ -123,7 +140,7 @@ export const useEditorStore = create<EditorState>()(
       tabs: [DEFAULT_TAB],
       activeTabId: 'main',
 
-      addTab: (label, isModule) => {
+      addTab: (label, tabType) => {
         const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
         set((state) => {
           // Save current tab's nodes/edges before switching
@@ -132,7 +149,7 @@ export const useEditorStore = create<EditorState>()(
             current.nodes = state.nodes as Node[]
             current.edges = state.edges as Edge[]
           }
-          state.tabs.push(createTab(id, label, isModule))
+          state.tabs.push(createTab(id, label, tabType))
           state.activeTabId = id
           state.nodes = []
           state.edges = []
@@ -159,26 +176,44 @@ export const useEditorStore = create<EditorState>()(
         set((state) => {
           const tab = state.tabs.find((t) => t.id === id)
           if (tab) {
-            const oldModuleName = tab.moduleName
+            const newSanitized = label.toLowerCase().replace(/[^a-z0-9_]/g, '_')
             tab.label = label
-            if (tab.isModule) {
-              const newModuleName = label.toLowerCase().replace(/[^a-z0-9_]/g, '_')
-              tab.moduleName = newModuleName
+
+            if (tab.tabType === 'module' || tab.tabType === 'loop') {
+              const oldModuleName = tab.moduleName
+              tab.moduleName = newSanitized
 
               // Propagate rename to all module_call nodes across all tabs
-              if (oldModuleName && oldModuleName !== newModuleName) {
-                // Update module_call nodes in saved tab data
+              if (oldModuleName && oldModuleName !== newSanitized) {
                 for (const t of state.tabs) {
                   for (const node of t.nodes) {
                     if (node.type === 'module_call' && (node.data as Record<string, unknown>).moduleName === oldModuleName) {
-                      ;(node.data as Record<string, unknown>).moduleName = newModuleName
+                      ;(node.data as Record<string, unknown>).moduleName = newSanitized
                     }
                   }
                 }
-                // Also update any module_call nodes in the live nodes array (active tab)
                 for (const node of state.nodes) {
                   if (node.type === 'module_call' && (node.data as Record<string, unknown>).moduleName === oldModuleName) {
-                    ;(node.data as Record<string, unknown>).moduleName = newModuleName
+                    ;(node.data as Record<string, unknown>).moduleName = newSanitized
+                  }
+                }
+              }
+            } else if (tab.tabType === 'sketch') {
+              const oldSketchName = tab.sketchName
+              tab.sketchName = newSanitized
+
+              // Propagate rename to all sketch_profile nodes across all tabs
+              if (oldSketchName && oldSketchName !== newSanitized) {
+                for (const t of state.tabs) {
+                  for (const node of t.nodes) {
+                    if (node.type === 'sketch_profile' && (node.data as Record<string, unknown>).sketchName === oldSketchName) {
+                      ;(node.data as Record<string, unknown>).sketchName = newSanitized
+                    }
+                  }
+                }
+                for (const node of state.nodes) {
+                  if (node.type === 'sketch_profile' && (node.data as Record<string, unknown>).sketchName === oldSketchName) {
+                    ;(node.data as Record<string, unknown>).sketchName = newSanitized
                   }
                 }
               }
@@ -186,11 +221,18 @@ export const useEditorStore = create<EditorState>()(
           }
         }),
 
+      getActiveTab: () => {
+        const state = get()
+        return state.tabs.find((t) => t.id === state.activeTabId)
+      },
+
       setActiveTab: (id) =>
         set((state) => {
           // Save current tab's state
           const current = getActiveTab(state)
           if (current) {
+            const snapshot = state.nodes.map(n => `${n.type}=${JSON.stringify(n.data)}`).join(' | ')
+            console.log(`[Botics] tab-save "${current.label}": ${snapshot}`)
             current.nodes = state.nodes as Node[]
             current.edges = state.edges as Edge[]
           }
@@ -200,6 +242,8 @@ export const useEditorStore = create<EditorState>()(
           if (next) {
             state.nodes = next.nodes
             state.edges = next.edges
+            const snapshot = next.nodes.map(n => `${n.type}=${JSON.stringify(n.data)}`).join(' | ')
+            console.log(`[Botics] tab-load "${next.label}": ${snapshot}`)
           }
         }),
 
@@ -209,7 +253,27 @@ export const useEditorStore = create<EditorState>()(
 
       onNodesChange: (changes) =>
         set((state) => {
+          // Collect ForLoop nodes being removed so we can clean up their body tabs
+          const removedBodyTabIds = changes
+            .filter((c) => c.type === 'remove')
+            .map((c) => state.nodes.find((n) => n.id === (c as { id: string }).id))
+            .filter((n) => n?.type === 'for_loop')
+            .map((n) => (n?.data as Record<string, unknown>)?.bodyTabId as string | undefined)
+            .filter(Boolean) as string[]
+
           state.nodes = applyNodeChanges(changes, state.nodes) as Node[]
+
+          // Remove orphaned loop body tabs
+          for (const tabId of removedBodyTabIds) {
+            const idx = state.tabs.findIndex((t) => t.id === tabId)
+            if (idx === -1) continue
+            state.tabs.splice(idx, 1)
+            if (state.activeTabId === tabId) {
+              state.activeTabId = state.tabs[0]?.id ?? 'main'
+              const tab = state.tabs.find((t) => t.id === state.activeTabId)
+              if (tab) { state.nodes = tab.nodes; state.edges = tab.edges }
+            }
+          }
         }),
 
       onEdgesChange: (changes) =>
@@ -226,6 +290,42 @@ export const useEditorStore = create<EditorState>()(
         set((state) => {
           const node = state.nodes.find((n) => n.id === id)
           if (node) Object.assign(node.data, data)
+        }),
+
+      updateNodeDataInTab: (tabId, nodeId, data) =>
+        set((state) => {
+          const tab = state.tabs.find((t) => t.id === tabId)
+          if (!tab) return
+          const node = tab.nodes.find((n) => n.id === nodeId)
+          if (node) Object.assign(node.data, data)
+        }),
+
+      propagateForLoopVarName: (forLoopNodeId, newVarName) =>
+        set((state) => {
+          // Update the for_loop node itself (it is on the active tab)
+          const forLoopNode = state.nodes.find((n) => n.id === forLoopNodeId)
+          if (forLoopNode) {
+            ;(forLoopNode.data as Record<string, unknown>).varName = newVarName
+            const bodyTabId = (forLoopNode.data as Record<string, unknown>).bodyTabId as string | undefined
+            if (bodyTabId) {
+              const bodyTab = state.tabs.find((t) => t.id === bodyTabId)
+              if (bodyTab) {
+                for (const n of bodyTab.nodes) {
+                  if (n.type === 'loop_var') {
+                    ;(n.data as Record<string, unknown>).varName = newVarName
+                  }
+                }
+              }
+              // Also update state.nodes in case the body tab is currently active
+              if (state.activeTabId === bodyTabId) {
+                for (const n of state.nodes) {
+                  if (n.type === 'loop_var') {
+                    ;(n.data as Record<string, unknown>).varName = newVarName
+                  }
+                }
+              }
+            }
+          }
         }),
 
       addNode: (node) =>
@@ -349,6 +449,12 @@ export const useEditorStore = create<EditorState>()(
       setShowParametersPanel: (v) => set((state) => { state.showParametersPanel = v }),
       setPreviewMode: (m) => set((state) => { state.previewMode = m }),
       setAutoRender: (v) => set((state) => { state.autoRender = v }),
+
+      // ── Sketch state ────────────────────────────────────────────────────────
+      sketchPreviewSvg: '',
+      setSketchPreviewSvg: (svg) => set((state) => { state.sketchPreviewSvg = svg }),
+      sketchGeneratedCode: '',
+      setSketchGeneratedCode: (code) => set((state) => { state.sketchGeneratedCode = code }),
 
       // ── Global Parameters ────────────────────────────────────────────────────
       globalParameters: [],

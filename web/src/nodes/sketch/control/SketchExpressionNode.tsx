@@ -1,7 +1,6 @@
 import type { NodeProps } from '@xyflow/react'
 import { SketchBaseNode, TextInput } from '../SketchBaseNode'
 import type { SketchExpressionData } from '@/types/sketchNodes'
-import { useSketchStore } from '@/store/sketchStore'
 import { useEditorStore } from '@/store/editorStore'
 
 function asIdentifier(raw: string): string {
@@ -11,7 +10,7 @@ function asIdentifier(raw: string): string {
 
 export function SketchExpressionNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchExpressionData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
   const globalParameters = useEditorStore((s) => s.globalParameters)
 
   const selectedParam = d.parameterName || globalParameters[0]?.name || ''

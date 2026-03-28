@@ -1,11 +1,11 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, NumberInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchTranslateData, SketchRotateData, SketchScaleData, SketchMirrorData } from '@/types/sketchNodes'
-import { useSketchStore } from '@/store/sketchStore'
+import { useEditorStore } from '@/store/editorStore'
 
 export function SketchTranslateNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchTranslateData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -15,15 +15,15 @@ export function SketchTranslateNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'shape' }, { id: 'in-1', label: 'x' }, { id: 'in-2', label: 'y' }]}
     >
-      <NumberInput label="x" value={d.x} step={1} onChange={(v) => update(id, { x: v })} />
-      <NumberInput label="y" value={d.y} step={1} onChange={(v) => update(id, { y: v })} />
+      <ExpressionInput label="x" value={d.x} step={1} nodeId={id} handleId="in-1" onChange={(v) => update(id, { x: v })} />
+      <ExpressionInput label="y" value={d.y} step={1} nodeId={id} handleId="in-2" onChange={(v) => update(id, { y: v })} />
     </SketchBaseNode>
   )
 }
 
 export function SketchRotateNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchRotateData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -33,14 +33,14 @@ export function SketchRotateNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'shape' }, { id: 'in-1', label: 'angle' }]}
     >
-      <NumberInput label="angle°" value={d.angle} step={5} onChange={(v) => update(id, { angle: v })} />
+      <ExpressionInput label="angle°" value={d.angle} step={5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { angle: v })} />
     </SketchBaseNode>
   )
 }
 
 export function SketchScaleNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchScaleData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -50,15 +50,15 @@ export function SketchScaleNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'shape' }, { id: 'in-1', label: 'x' }, { id: 'in-2', label: 'y' }]}
     >
-      <NumberInput label="x" value={d.x} step={0.1} onChange={(v) => update(id, { x: v })} />
-      <NumberInput label="y" value={d.y} step={0.1} onChange={(v) => update(id, { y: v })} />
+      <ExpressionInput label="x" value={d.x} step={0.1} nodeId={id} handleId="in-1" onChange={(v) => update(id, { x: v })} />
+      <ExpressionInput label="y" value={d.y} step={0.1} nodeId={id} handleId="in-2" onChange={(v) => update(id, { y: v })} />
     </SketchBaseNode>
   )
 }
 
 export function SketchMirrorNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as SketchMirrorData
-  const update = useSketchStore((s) => s.updateNodeData)
+  const update = useEditorStore((s) => s.updateNodeData)
 
   return (
     <SketchBaseNode
@@ -68,7 +68,7 @@ export function SketchMirrorNode({ id, data, selected }: NodeProps) {
       selected={selected}
       inputHandles={[{ id: 'in-0', label: 'shape' }, { id: 'in-1', label: 'axis' }]}
     >
-      <NumberInput label="axis°" value={d.axisAngle} step={5} onChange={(v) => update(id, { axisAngle: v })} />
+      <ExpressionInput label="axis°" value={d.axisAngle} step={5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { axisAngle: v })} />
     </SketchBaseNode>
   )
 }
