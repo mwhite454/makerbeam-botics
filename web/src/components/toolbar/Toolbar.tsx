@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { useEditorStore } from '@/store/editorStore'
 import { useOpenSCAD }    from '@/wasm/useOpenSCAD'
 import { clearSavedProject } from '@/hooks/useAutoSave'
+import { usePreferencesStore, type AutoSaveInterval } from '@/store/preferencesStore'
 import type { WasmStatus } from '@/wasm/useOpenSCAD'
 
 interface ToolbarProps {
@@ -27,13 +28,27 @@ function WasmIndicator({ status }: { status: WasmStatus }) {
   )
 }
 
+function sanitizeFilename(name: string): string {
+  return (
+    name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    || 'untitled-project'
+  )
+}
+
 export function Toolbar({ onRender }: ToolbarProps) {
   const { wasmStatus } = useOpenSCAD()
   const {
     renderStatus, previewMode, autoRender, codePanelOpen,
     setPreviewMode, setAutoRender, toggleCodePanel,
     exportProject, importProject,
+    projectName, setProjectName, resetProject,
   } = useEditorStore()
+
+  const autoSaveEnabled    = usePreferencesStore((s) => s.autoSaveEnabled)
+  const autoSaveIntervalMs = usePreferencesStore((s) => s.autoSaveIntervalMs)
+  const setAutoSaveEnabled    = usePreferencesStore((s) => s.setAutoSaveEnabled)
+  const setAutoSaveIntervalMs = usePreferencesStore((s) => s.setAutoSaveIntervalMs)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
@@ -42,13 +57,21 @@ export function Toolbar({ onRender }: ToolbarProps) {
     const url  = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'openscad-project.json'
+    a.download = `${sanitizeFilename(projectName)}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
 
   const handleLoad = () => {
     fileInputRef.current?.click()
+  }
+
+  const handleNew = () => {
+    if (!window.confirm('Start a new project? Your current project will be downloaded first.')) return
+    handleSave()
+    resetProject()
+    clearSavedProject()
+    usePreferencesStore.getState().setLastViewport({ x: 0, y: 0, zoom: 1 })
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,13 +95,20 @@ export function Toolbar({ onRender }: ToolbarProps) {
         <div className="w-5 h-5 bg-yellow-500 rounded flex items-center justify-center text-[10px] font-black text-gray-900">
           MB
         </div>
-        <span className="text-sm font-semibold text-white">Node Editor</span>
+        <input
+          type="text"
+          className="text-sm font-semibold text-white bg-transparent border-none outline-none w-36 hover:bg-gray-800 focus:bg-gray-800 rounded px-1 -ml-1 transition-colors placeholder:text-gray-500"
+          value={projectName}
+          onChange={(e) => setProjectName(e.target.value)}
+          placeholder="Untitled Project"
+          title="Project name (click to edit)"
+        />
       </div>
 
       {/* Separator */}
       <div className="w-px h-5 bg-gray-700" />
 
-      {/* Save/Load */}
+      {/* Save/Load/New */}
       <button
         className="text-[11px] text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"
         onClick={handleSave}
@@ -93,6 +123,13 @@ export function Toolbar({ onRender }: ToolbarProps) {
       >
         Load
       </button>
+      <button
+        className="text-[11px] text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-gray-800"
+        onClick={handleNew}
+        title="Start a new project (current project will be saved first)"
+      >
+        New +
+      </button>
       <input
         ref={fileInputRef}
         type="file"
@@ -100,6 +137,35 @@ export function Toolbar({ onRender }: ToolbarProps) {
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {/* Separator */}
+      <div className="w-px h-5 bg-gray-700" />
+
+      {/* Auto-save controls */}
+      <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer">
+        <input
+          type="checkbox"
+          className="accent-blue-500"
+          checked={autoSaveEnabled}
+          onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+        />
+        Auto-save
+      </label>
+      {autoSaveEnabled && (
+        <select
+          className="text-[11px] bg-gray-800 text-gray-400 border border-gray-700 rounded px-1 py-0.5"
+          value={String(autoSaveIntervalMs)}
+          onChange={(e) => {
+            const v = e.target.value
+            setAutoSaveIntervalMs(v === 'off' ? 'off' : (Number(v) as AutoSaveInterval))
+          }}
+        >
+          <option value="10000">10s</option>
+          <option value="30000">30s</option>
+          <option value="60000">1 min</option>
+          <option value="300000">5 min</option>
+        </select>
+      )}
 
       <div className="flex-1" />
 

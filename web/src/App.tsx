@@ -50,6 +50,11 @@ function AppInner() {
   useCodegen()
   useSketchCodegen()
   const { doRender } = useAutoRender()
+  useAutoSave()
+
+  useEffect(() => {
+    loadSavedProject()
+  }, [])
 
   const paletteRef = usePanelRef()
   const previewRef = usePanelRef()

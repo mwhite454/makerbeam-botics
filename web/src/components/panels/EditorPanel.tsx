@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -6,15 +6,18 @@ import {
   MiniMap,
   type Node,
   type ReactFlowInstance,
+  type Viewport,
   BackgroundVariant,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
 import { useEditorStore }    from '@/store/editorStore'
+import { usePreferencesStore } from '@/store/preferencesStore'
 import { nodeTypes }         from '@/nodes'
 import { PALETTE_ITEMS }     from '@/types/nodes'
 import { DeletableEdge }     from '@/components/DeletableEdge'
 import { SearchBar }         from '@/components/SearchBar'
+import { ContextMenu }       from '@/components/panels/ContextMenu'
 
 const edgeTypes = { default: DeletableEdge }
 
@@ -25,6 +28,11 @@ export function EditorPanel() {
   const updateNodeData = useEditorStore((s) => s.updateNodeData)
   const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes)
   const rfInstance = useRef<ReactFlowInstance | null>(null)
+
+  const lastViewport    = usePreferencesStore((s) => s.lastViewport)
+  const setLastViewport = usePreferencesStore((s) => s.setLastViewport)
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -74,6 +82,17 @@ export function EditorPanel() {
     }
   }, [groupSelectedNodes])
 
+  const onMoveEnd = useCallback((_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
+    setLastViewport(vp)
+  }, [setLastViewport])
+
+  const onContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const selected = useEditorStore.getState().nodes.filter((n) => n.selected)
+    if (selected.length < 2) return
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }, [])
+
   return (
     <div className="flex-1 relative bg-gray-950">
       <SearchBar
@@ -93,7 +112,9 @@ export function EditorPanel() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onKeyDown={onKeyDown}
-        fitView
+        onMoveEnd={onMoveEnd}
+        onContextMenu={onContextMenu}
+        defaultViewport={lastViewport}
         deleteKeyCode={['Delete', 'Backspace']}
         edgesFocusable
         multiSelectionKeyCode="Shift"
@@ -138,6 +159,15 @@ export function EditorPanel() {
           maskColor="rgba(0,0,0,0.5)"
         />
       </ReactFlow>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onGroupNodes={groupSelectedNodes}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {/* Empty state hint */}
       {nodes.length === 0 && (

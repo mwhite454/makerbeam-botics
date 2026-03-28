@@ -1,19 +1,24 @@
 import { useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store/editorStore'
+import { usePreferencesStore } from '@/store/preferencesStore'
 
 const STORAGE_KEY = 'makerbeam-project'
-const DEBOUNCE_MS = 1000
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 export function useAutoSave() {
-  const nodes       = useEditorStore((s) => s.nodes)
-  const edges       = useEditorStore((s) => s.edges)
-  const tabs        = useEditorStore((s) => s.tabs)
-  const activeTabId = useEditorStore((s) => s.activeTabId)
-  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const nodes           = useEditorStore((s) => s.nodes)
+  const edges           = useEditorStore((s) => s.edges)
+  const tabs            = useEditorStore((s) => s.tabs)
+  const activeTabId     = useEditorStore((s) => s.activeTabId)
+  const autoSaveEnabled = usePreferencesStore((s) => s.autoSaveEnabled)
+  const intervalMs      = usePreferencesStore((s) => s.autoSaveIntervalMs)
+  const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
+
+    if (!autoSaveEnabled || intervalMs === 'off') return
+
     timerRef.current = setTimeout(() => {
       try {
         const json = useEditorStore.getState().exportProject()
@@ -25,12 +30,12 @@ export function useAutoSave() {
       } catch (err) {
         console.warn('[autoSave] Failed to save:', err)
       }
-    }, DEBOUNCE_MS)
+    }, intervalMs)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [nodes, edges, tabs, activeTabId])
+  }, [nodes, edges, tabs, activeTabId, autoSaveEnabled, intervalMs])
 }
 
 export function loadSavedProject(): boolean {

@@ -6,11 +6,13 @@ import {
   MiniMap,
   type Node,
   type ReactFlowInstance,
+  type Viewport,
   BackgroundVariant,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
 import { useEditorStore } from '@/store/editorStore'
+import { usePreferencesStore } from '@/store/preferencesStore'
 import hitTest from '@/utils/hitTest'
 import { useSketchStore } from '@/store/sketchStore'
 import { sketchNodeTypes } from '@/nodes/sketch'
@@ -28,6 +30,13 @@ export function SketchEditorPanel() {
   const updateNodeData = useEditorStore((s) => s.updateNodeData)
   const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes)
   const rfInstance = useRef<ReactFlowInstance | null>(null)
+
+  const lastViewport    = usePreferencesStore((s) => s.lastViewport)
+  const setLastViewport = usePreferencesStore((s) => s.setLastViewport)
+
+  const onMoveEnd = useCallback((_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
+    setLastViewport(vp)
+  }, [setLastViewport])
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -146,7 +155,8 @@ export function SketchEditorPanel() {
         onDrop={onDrop}
         onKeyDown={onKeyDown}
         onPaneClick={(e) => onPaneClick(e as unknown as MouseEvent)}
-        fitView
+        onMoveEnd={onMoveEnd}
+        defaultViewport={lastViewport}
         deleteKeyCode={['Delete', 'Backspace']}
         edgesFocusable
         multiSelectionKeyCode="Shift"

@@ -121,6 +121,11 @@ interface EditorState {
   sketchGeneratedCode: string
   setSketchGeneratedCode: (code: string) => void
 
+  // ── Project identity ────────────────────────────────────────────────────────
+  projectName: string
+  setProjectName: (name: string) => void
+  resetProject: () => void
+
   // ── Save/load ───────────────────────────────────────────────────────────────
   exportProject: () => string
   importProject: (json: string) => void
@@ -481,6 +486,23 @@ export const useEditorStore = create<EditorState>()(
           if (idx !== -1) state.globalParameters.splice(idx, 1)
         }),
 
+      // ── Project identity ────────────────────────────────────────────────────
+      projectName: '',
+
+      setProjectName: (name) =>
+        set((state) => { state.projectName = name }),
+
+      resetProject: () =>
+        set((state) => {
+          const freshTab = createTab('main', 'Main')
+          state.tabs = [freshTab]
+          state.activeTabId = 'main'
+          state.nodes = []
+          state.edges = []
+          state.globalParameters = []
+          state.projectName = ''
+        }),
+
       // ── Save / load ─────────────────────────────────────────────────────────
       exportProject: () => {
         const state = get()
@@ -491,7 +513,11 @@ export const useEditorStore = create<EditorState>()(
           }
           return tab
         })
-        return JSON.stringify({ version: 1, tabs, activeTabId: state.activeTabId, globalParameters: state.globalParameters }, null, 2)
+        return JSON.stringify(
+          { version: 1, projectName: state.projectName, tabs, activeTabId: state.activeTabId, globalParameters: state.globalParameters },
+          null,
+          2
+        )
       },
 
       importProject: (json) =>
@@ -504,6 +530,7 @@ export const useEditorStore = create<EditorState>()(
             state.tabs = data.tabs
             state.activeTabId = data.activeTabId || data.tabs[0].id
             state.globalParameters = Array.isArray(data.globalParameters) ? data.globalParameters : []
+            state.projectName = typeof data.projectName === 'string' ? data.projectName : ''
             const active = state.tabs.find((t) => t.id === state.activeTabId)
             if (active) {
               state.nodes = active.nodes
