@@ -7,8 +7,6 @@ export function SketchToolbar() {
     toggleCodePanel,
     exportProject,
     importProject,
-    addAnchorMode,
-    toggleAddAnchorMode,
   } = useSketchStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -95,14 +93,6 @@ export function SketchToolbar() {
         onClick={toggleCodePanel}
       >
         {codePanelOpen ? '▼ Code' : '▲ Code'}
-      </button>
-
-      <button
-        className={`text-[11px] px-2 py-1 rounded ${addAnchorMode ? 'bg-emerald-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-        onClick={toggleAddAnchorMode}
-        title="Toggle Add Anchor Mode"
-      >
-        {addAnchorMode ? '🔵 Add Anchor (on)' : '◯ Add Anchor'}
       </button>
 
       {/* Status */}

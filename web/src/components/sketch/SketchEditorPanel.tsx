@@ -13,13 +13,11 @@ import '@xyflow/react/dist/style.css'
 
 import { useEditorStore } from '@/store/editorStore'
 import { usePreferencesStore } from '@/store/preferencesStore'
-import hitTest from '@/utils/hitTest'
 import { useSketchStore } from '@/store/sketchStore'
 import { sketchNodeTypes } from '@/nodes/sketch'
 import { SKETCH_PALETTE_ITEMS } from '@/types/sketchNodes'
 import { DeletableEdge } from '@/components/DeletableEdge'
 import { SearchBar } from '@/components/SearchBar'
-import { AnchorOverlay } from '@/components/sketch/AnchorOverlay'
 
 const edgeTypes = { default: DeletableEdge }
 
@@ -70,13 +68,10 @@ export function SketchEditorPanel() {
   )
 
   const addAnchorMode = useSketchStore((s) => s.addAnchorMode)
-  const toggleAddAnchorMode = useSketchStore((s) => s.toggleAddAnchorMode)
   const updateSketchNode = useEditorStore((s) => s.updateNodeData)
-  const nodesState = useEditorStore((s) => s.nodes)
-  const dragRef = useRef<{ nodeId: string; anchorIndex: number } | null>(null)
 
   const onPaneClick = useCallback((event: any) => {
-    if (!rfInstance.current) return
+    if (!addAnchorMode || !rfInstance.current) return
     const nodes = useEditorStore.getState().nodes
     const sel = nodes.find((n) => n.selected && n.type === 'sketch_path')
     if (!sel) return
@@ -84,47 +79,14 @@ export function SketchEditorPanel() {
     try {
       const data = sel.data as Record<string, unknown>
       const anchors = JSON.parse(String(data.anchorsJson || '[]')) as Array<{ pos: [number, number] }>
-      if (addAnchorMode) {
-        if (anchors.length >= 2) {
-          const pts = anchors.map((a) => a.pos)
-          const segIdx = hitTest.nearestSegmentIndex(pts as any, flowPos.x, flowPos.y)
-          const insertAt = segIdx >= 0 ? segIdx + 1 : anchors.length
-          ;(anchors as any).splice(insertAt, 0, { id: `a${Date.now()}`, pos: [flowPos.x, flowPos.y] })
-        } else {
-          ;(anchors as any).push({ id: `a${Date.now()}`, pos: [flowPos.x, flowPos.y] })
-        }
-        updateSketchNode(sel.id, { anchorsJson: JSON.stringify(anchors) })
-        return
+      if (anchors.length >= 2) {
+        ;(anchors as any).push({ id: `a${Date.now()}`, pos: [flowPos.x, flowPos.y] })
+      } else {
+        ;(anchors as any).push({ id: `a${Date.now()}`, pos: [flowPos.x, flowPos.y] })
       }
-
-      // Not in add mode: check for anchor hit to start drag
-      if (anchors.length > 0) {
-        const pts = anchors.map((a) => a.pos)
-        const idx = hitTest.nearestAnchorIndex(pts as any, flowPos.x, flowPos.y, 6)
-        if (idx >= 0) {
-          dragRef.current = { nodeId: sel.id, anchorIndex: idx }
-          const onMove = (ev: MouseEvent) => {
-            const fp = rfInstance.current!.screenToFlowPosition({ x: ev.clientX, y: ev.clientY })
-            const st = useEditorStore.getState()
-            const node = st.nodes.find((n) => n.id === sel.id)
-            if (!node) return
-            try {
-              const a = JSON.parse(String(node.data.anchorsJson || '[]')) as Array<{ pos: [number, number] }>
-              a[idx].pos = [fp.x, fp.y]
-              useEditorStore.setState((s) => { const n = s.nodes.find((x) => x.id === sel.id); if (n) Object.assign(n.data, { anchorsJson: JSON.stringify(a) }) })
-            } catch {}
-          }
-          const onUp = () => {
-            dragRef.current = null
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
-          }
-          window.addEventListener('mousemove', onMove)
-          window.addEventListener('mouseup', onUp)
-        }
-      }
+      updateSketchNode(sel.id, { anchorsJson: JSON.stringify(anchors) })
     } catch (err) {
-      console.error('[onPaneClick] failed to handle click', err)
+      console.error('[onPaneClick] failed to add anchor', err)
     }
   }, [addAnchorMode, updateSketchNode])
 
@@ -171,7 +133,6 @@ export function SketchEditorPanel() {
         }}
         proOptions={{ hideAttribution: true }}
       >
-        <AnchorOverlay />
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}

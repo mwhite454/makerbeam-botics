@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useEditorStore } from '@/store/editorStore'
+import { ExportDropdown } from './ExportDropdown'
 import { useOpenSCAD }    from '@/wasm/useOpenSCAD'
 import { clearSavedProject } from '@/hooks/useAutoSave'
 import { usePreferencesStore, type AutoSaveInterval } from '@/store/preferencesStore'
@@ -137,6 +138,11 @@ export function Toolbar({ onRender }: ToolbarProps) {
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {/* Separator */}
+      <div className="w-px h-5 bg-gray-700" />
+
+      <ExportDropdown />
 
       {/* Separator */}
       <div className="w-px h-5 bg-gray-700" />

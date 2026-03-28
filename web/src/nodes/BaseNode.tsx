@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react'
 import { NodeCategory, CATEGORY_COLORS, CATEGORY_TEXT } from '@/types/nodes'
 import { NodeMetaFields } from '@/components/NodeMetaFields'
@@ -38,10 +38,33 @@ export function BaseNode({
   const nodeTags = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeTags as string[] | undefined)
   const searchMatch = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?._searchMatch as boolean | undefined)
 
+  const nodeRef = useRef<HTMLDivElement>(null)
+
   const onDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
     deleteElements({ nodes: [{ id }] })
   }
+
+  // Tab: cycle through inputs within this node; Shift+Tab goes backward
+  const handleNodeKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return
+    const target = e.target as HTMLElement
+    if (target.tagName !== 'INPUT') return
+    const node = nodeRef.current
+    if (!node) return
+    const inputs = Array.from(node.querySelectorAll<HTMLInputElement>('input:not([tabindex="-1"])'))
+    const idx = inputs.indexOf(target as HTMLInputElement)
+    if (idx === -1) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.shiftKey) {
+      if (idx > 0) inputs[idx - 1].focus()
+      else target.blur()
+    } else {
+      if (idx < inputs.length - 1) inputs[idx + 1].focus()
+      else target.blur()
+    }
+  }, [])
 
   const handleRowGap = 34
   const handleBottomReserve = 40
@@ -52,6 +75,8 @@ export function BaseNode({
 
   return (
     <div
+      ref={nodeRef}
+      onKeyDown={handleNodeKeyDown}
       className={`
         rounded-lg shadow-xl border transition-all
         ${searchMatch
@@ -192,6 +217,7 @@ export function NumberInput({ label, value, min, max, step = 1, onChange }: Numb
         max={max}
         step={step}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onFocus={(e) => e.target.select()}
       />
     </label>
   )
@@ -268,12 +294,18 @@ export function ExpressionInput({ label, value, step = 1, onChange, nodeId, hand
   }
 
   const handleFormulaKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.ctrlKey && e.key === 'm') {
+      e.preventDefault()
+      toggleFormula()
+      return
+    }
     if (e.key === 'Enter') {
       if (open && activeIdx >= 0) {
         e.preventDefault()
         applySuggestion(suggestions[activeIdx].name)
       } else {
         flush()
+        e.currentTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
       }
       return
     }
@@ -348,9 +380,15 @@ export function ExpressionInput({ label, value, step = 1, onChange, nodeId, hand
                 setLocalStr(str)
                 if (str.trim() !== '') onChange(parseExprChange(str))
               }}
-              onFocus={() => setIsFocused(true)}
+              onFocus={(e) => { setIsFocused(true); e.target.select() }}
               onBlur={handleBlur}
-              onKeyDown={(e) => { if (e.key === 'Enter') flush() }}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === 'm') { e.preventDefault(); toggleFormula(); return }
+                if (e.key === 'Enter') {
+                  flush()
+                  e.currentTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+                }
+              }}
             />
           )}
 
@@ -453,7 +491,13 @@ function AxisField({ axis, value, step, nodeId, handleId, onChange }: AxisFieldP
           onChange={(e) => setLocalStr(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => { setIsFocused(false); flush() }}
-          onKeyDown={(e) => { if (e.key === 'Enter') flush() }}
+          onKeyDown={(e) => {
+            if (e.ctrlKey && e.key === 'm') { e.preventDefault(); toggleFormula(); return }
+            if (e.key === 'Enter') {
+              flush()
+              e.currentTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+            }
+          }}
         />
       ) : (
         <input
@@ -466,9 +510,15 @@ function AxisField({ axis, value, step, nodeId, handleId, onChange }: AxisFieldP
             setLocalStr(str)
             if (str.trim() !== '') onChange(parseExprChange(str))
           }}
-          onFocus={() => setIsFocused(true)}
+          onFocus={(e) => { setIsFocused(true); e.target.select() }}
           onBlur={() => { setIsFocused(false); flush() }}
-          onKeyDown={(e) => { if (e.key === 'Enter') flush() }}
+          onKeyDown={(e) => {
+            if (e.ctrlKey && e.key === 'm') { e.preventDefault(); toggleFormula(); return }
+            if (e.key === 'Enter') {
+              flush()
+              e.currentTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+            }
+          }}
         />
       )}
     </div>

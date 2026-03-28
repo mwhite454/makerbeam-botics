@@ -105,13 +105,23 @@ function SvgViewer({ svg }: { svg: string }) {
     }
   }, [svg, fitToView])
 
+  const gridSize = 50
+
   return (
     <div className="w-full h-full relative bg-gray-950 overflow-hidden">
       {/* Zoomable/pannable area */}
       <div
         ref={containerRef}
         className="w-full h-full"
-        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+        style={{
+          cursor: isPanning ? 'grabbing' : 'grab',
+          backgroundImage: [
+            'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
+            'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+          ].join(', '),
+          backgroundSize: `${gridSize * scale}px ${gridSize * scale}px`,
+          backgroundPosition: `${translate.x}px ${translate.y}px`,
+        }}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
@@ -121,7 +131,7 @@ function SvgViewer({ svg }: { svg: string }) {
         <div
           ref={contentRef}
           className="sketch-svg-container"
-          dangerouslySetInnerHTML={{ __html: svg }}
+          dangerouslySetInnerHTML={{ __html: svg.replace('<svg ', '<svg overflow="visible" ') }}
           style={{
             transformOrigin: '0 0',
             transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,

@@ -192,7 +192,12 @@ function buildModel(
       // Anchors stored as JSON array of {id,pos:[x,y],...}
       try {
         const anchors = JSON.parse(String(d.anchorsJson || '[]')) as Array<{ pos: number[] }>
-        const pts = anchors.map((a) => a.pos)
+        // Negate Y: anchors are in SVG Y-down space; makerjs expects Y-up.
+        // Resolve each coordinate so that expression strings (e.g. param names) evaluate to numbers.
+        const pts = anchors.map((a) => [
+          resolveExpr(a.pos[0], paramValues, 0),
+          -resolveExpr(a.pos[1], paramValues, 0),
+        ])
         if (pts.length >= 2) {
           model = new makerjs.models.ConnectTheDots(d.closed === true, pts)
         }
@@ -207,15 +212,16 @@ function buildModel(
       // Template is child handle 0, path is child handle 1 (or path data may be inline)
       const tpl = getChildModel(0)
       // Try to read anchors from connected path node if present
-      let anchors: number[][] = []
+      // Anchor coords may be numbers or expression strings — resolve all to numbers.
+      let anchors: [number, number][] = []
       const pathChild = children.find((c) => c.handleIndex === 1)
       if (pathChild) {
         const pathNode = nodesMap.get(pathChild.nodeId)
         if (pathNode) {
           try {
             const pd = pathNode.data as Record<string, unknown>
-            const a = JSON.parse(String(pd.anchorsJson || '[]')) as Array<{ pos: number[] }>
-            anchors = a.map((it) => it.pos)
+            const a = JSON.parse(String(pd.anchorsJson || '[]')) as Array<{ pos: unknown[] }>
+            anchors = a.map((it) => [resolveExpr(it.pos[0], paramValues, 0), resolveExpr(it.pos[1], paramValues, 0)])
           } catch {
             anchors = []
           }
@@ -225,8 +231,8 @@ function buildModel(
       // Fallback: inline anchors on this node
       if (anchors.length === 0) {
         try {
-          const a = JSON.parse(String(d.anchorsJson || '[]')) as Array<{ pos: number[] }>
-          anchors = a.map((it) => it.pos)
+          const a = JSON.parse(String(d.anchorsJson || '[]')) as Array<{ pos: unknown[] }>
+          anchors = a.map((it) => [resolveExpr(it.pos[0], paramValues, 0), resolveExpr(it.pos[1], paramValues, 0)])
         } catch {
           anchors = []
         }
@@ -237,8 +243,10 @@ function buildModel(
         break
       }
 
-      // Construct a lightweight Path object for the layout util
-      const pathObj = { anchors: anchors.map((p) => ({ pos: { x: p[0], y: p[1] } })), segments: [], closed: d.closed === true }
+      // Construct a lightweight Path object for the layout util.
+      // Anchors are stored in SVG Y-down space (PathPreview convention); makerjs uses
+      // math Y-up, so we negate Y here so that layout positions land in the correct space.
+      const pathObj = { anchors: anchors.map((p) => ({ pos: { x: p[0], y: -p[1] } })), segments: [], closed: d.closed === true }
       const opts = {
         mode: (d.mode as any) || 'count',
         count: Number(d.count) || 1,
@@ -703,11 +711,13 @@ export function buildSketchModel(nodes: Node[], edges: Edge[], globalParameters:
 // ─── Public: generate SVG string from model ───────────────────────────────────
 
 export function generateSketchSvg(model: makerjs.IModel): string {
-  return makerjs.exporter.toSVG(model, {
+  const svg = makerjs.exporter.toSVG(model, {
     stroke: '#f472b6',
     strokeWidth: '1.5px',
     fill: 'none',
     fontSize: '10px',
     useSvgPathOnly: true,
   })
+  // Add non-scaling strokes so lines stay crisp regardless of zoom level
+  return svg.replace(/<path /g, '<path vector-effect="non-scaling-stroke" ')
 }
