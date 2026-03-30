@@ -16,6 +16,9 @@ dist/
 .vscode/
 .idea/
 
+# Wrangler
+.wrangler/
+
 # OS
 .DS_Store
 Thumbs.db
