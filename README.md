@@ -1,73 +1,48 @@
-# makerbeam-botics
+# MakerBeam Botics
 
-Simple OpenSCAD attachments for MakerBeamXL aluminium extrusion — servo mounts, motor mounts, and custom connectors — designed with the help of Claude via an [MCP](https://modelcontextprotocol.io/) server.
+A visual node editor for parametric 3D design, powered by OpenSCAD compiled to WebAssembly. Design parts by connecting nodes — no code required.
 
-## What this does
+**Live:** [mecha.betty-bot.us](https://mecha.betty-bot.us)
 
-This repository provides:
+## Features
 
-1. **An MCP server** (`makerbeam_botics.server`) that exposes four tools to Claude:
-   - `list_designs` — list all `.scad` files in the `designs/` directory
-   - `read_design` — read the OpenSCAD source of a design file
-   - `write_design` — create or update a design file
-   - `render_design` — render a design to STL, PNG, or other formats using the OpenSCAD CLI
+- **Visual node editor** — drag-and-drop 3D primitives, transforms, booleans, and control flow
+- **2D sketch editor** — draw profiles with paths, arcs, and boolean operations
+- **Real-time preview** — OpenSCAD WASM renders your design in the browser as you build
+- **Export** — STL, PNG, SVG, DXF output formats
+- **MakerBeam node pack** — pre-built parametric MakerBeamXL extrusion parts
+- **No backend** — everything runs client-side in your browser
 
-2. **Starter designs** in `designs/`:
-   - `makerbeam.scad` — MakerBeamXL 15×15 mm profile, dimensions, and reusable modules
-   - `servo_mount.scad` — Bracket for SG90/MG90S micro-servos on MakerBeamXL
-   - `motor_mount.scad` — Clamp-style bracket for N20 micro gear motors on MakerBeamXL
-
-## Requirements
-
-- Python 3.10+
-- [OpenSCAD](https://openscad.org/downloads.html) installed and on your `PATH` (for rendering)
-- [Claude Desktop or claude-code](https://claude.ai) (or any MCP-compatible client) for design sessions
-
-## Installation
+## Local Development
 
 ```bash
-pip install -e .
+npm install
+npm run dev
 ```
 
-## Connecting to Claude
-
-Add the server to your MCP client configuration (e.g. Claude Desktop `~/.claude.json` or `claude mcp add`):
-
-```json
-{
-  "mcpServers": {
-    "makerbeam-botics": {
-      "command": "makerbeam-botics"
-    }
-  }
-}
-```
-
-Or run it directly:
+## Build
 
 ```bash
-makerbeam-botics
+npm run build
+npm run preview
 ```
 
-Once connected, Claude can list, read, create, and render OpenSCAD designs using natural language.
-
-## Example session
-
-```
-You: Create a bracket to attach a servo to a MakerBeamXL rail.
-Claude: [uses write_design to create servo_mount.scad, then render_design to produce servo_mount.stl]
-```
-
-## Development
+## Self-Hosting with Docker
 
 ```bash
-pip install -e ".[dev]"
-pytest
+docker build -t makerbeam-botics .
+docker run -p 8080:80 makerbeam-botics
 ```
 
-## Hardware notes
+The nginx config sets `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` headers required for SharedArrayBuffer (OpenSCAD WASM multi-threading).
 
-- MakerBeamXL extrusion: 15×15 mm aluminium T-slot, M3 hardware
-- Designs are sized for FDM 3D printing with standard 0.4 mm nozzle
-- Default tolerance: 0.3 mm for fits, 0.2 mm for printed-to-printed interfaces
+## Tech Stack
 
+- React + TypeScript + Vite
+- [XYFlow](https://xyflow.com) (node editor)
+- [OpenSCAD WASM](https://github.com/nicolo-ribaudo/openscad-wasm) (in-browser rendering)
+- [Three.js](https://threejs.org) (3D preview)
+- [Maker.js](https://maker.js.org) (2D sketch operations)
+- Zustand (state management)
+- Tailwind CSS (styling)
+- Deployed on Cloudflare Pages
