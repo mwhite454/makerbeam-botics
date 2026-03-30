@@ -10,5 +10,11 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "routes": [
+    {
+      "pattern": "mecha.betty-bot.us",
+      "custom_domain": true
+    }
   ]
 }
