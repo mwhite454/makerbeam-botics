@@ -1,113 +1,133 @@
-import type { NodeTypes } from '@xyflow/react'
+import type { NodeTypes } from "@xyflow/react";
 
-import { SphereNode }       from './primitives3d/SphereNode'
-import { CubeNode }         from './primitives3d/CubeNode'
-import { CylinderNode }     from './primitives3d/CylinderNode'
-import { PolyhedronNode }   from './primitives3d/PolyhedronNode'
+import { SphereNode } from "./primitives3d/SphereNode";
+import { CubeNode } from "./primitives3d/CubeNode";
+import { CylinderNode } from "./primitives3d/CylinderNode";
+import { PolyhedronNode } from "./primitives3d/PolyhedronNode";
 
-import { CircleNode }       from './primitives2d/CircleNode'
-import { SquareNode }       from './primitives2d/SquareNode'
-import { PolygonNode }      from './primitives2d/PolygonNode'
-import { ScadTextNode }     from './primitives2d/TextNode'
-import { SketchProfileNode } from './primitives2d/SketchProfileNode'
+import { CircleNode } from "./primitives2d/CircleNode";
+import { SquareNode } from "./primitives2d/SquareNode";
+import { PolygonNode } from "./primitives2d/PolygonNode";
+import { ScadTextNode } from "./primitives2d/TextNode";
+import { SketchProfileNode } from "./primitives2d/SketchProfileNode";
 
-import { TranslateNode }    from './transforms/TranslateNode'
-import { RotateNode }       from './transforms/RotateNode'
-import { ScaleNode }        from './transforms/ScaleNode'
-import { MirrorNode }       from './transforms/MirrorNode'
-import { ResizeNode }       from './transforms/ResizeNode'
-import { MultmatrixNode }   from './transforms/MultmatrixNode'
-import { OffsetNode }       from './transforms/OffsetNode'
+import { TranslateNode } from "./transforms/TranslateNode";
+import { RotateNode } from "./transforms/RotateNode";
+import { ScaleNode } from "./transforms/ScaleNode";
+import { MirrorNode } from "./transforms/MirrorNode";
+import { ResizeNode } from "./transforms/ResizeNode";
+import { MultmatrixNode } from "./transforms/MultmatrixNode";
+import { OffsetNode } from "./transforms/OffsetNode";
 
-import { UnionNode, DifferenceNode, IntersectionNode } from './booleans/BooleanNode'
+import {
+  UnionNode,
+  DifferenceNode,
+  IntersectionNode,
+} from "./booleans/BooleanNode";
 
-import { LinearExtrudeNode } from './extrusions/LinearExtrudeNode'
-import { RotateExtrudeNode } from './extrusions/RotateExtrudeNode'
+import { LinearExtrudeNode } from "./extrusions/LinearExtrudeNode";
+import { RotateExtrudeNode } from "./extrusions/RotateExtrudeNode";
 
-import { HullNode, MinkowskiNode } from './modifiers/HullMinkowskiNode'
-import { ColorNode }        from './modifiers/ColorNode'
-import { ProjectionNode }   from './modifiers/ProjectionNode'
-import { RenderNode }       from './modifiers/RenderNode'
+import { HullNode, MinkowskiNode } from "./modifiers/HullMinkowskiNode";
+import { ColorNode } from "./modifiers/ColorNode";
+import { ProjectionNode } from "./modifiers/ProjectionNode";
+import { RenderNode } from "./modifiers/RenderNode";
 
-import { ForLoopNode }      from './control/ForLoopNode'
-import { IfCondNode }       from './control/IfCondNode'
-import { VarNode }          from './control/VarNode'
-import { EchoNode }         from './control/EchoNode'
-import { IntersectionForNode } from './control/IntersectionForNode'
-import { AssertNode }       from './control/AssertNode'
-import { ParameterNode, ParameterListNode } from './control/ParameterNode'
-import { ModuleCallNode }   from './control/ModuleCallNode'
-import { ModuleArgNode }    from './control/ModuleArgNode'
-import { LoopVarNode }     from './control/LoopVarNode'
-import { ExpressionNode }   from './control/ExpressionNode'
+import { ForLoopNode } from "./control/ForLoopNode";
+import { IfCondNode } from "./control/IfCondNode";
+import { VarNode } from "./control/VarNode";
+import { EchoNode } from "./control/EchoNode";
+import { IntersectionForNode } from "./control/IntersectionForNode";
+import { AssertNode } from "./control/AssertNode";
+import { ParameterNode, ParameterListNode } from "./control/ParameterNode";
+import { ModuleCallNode } from "./control/ModuleCallNode";
+import { ModuleArgNode } from "./control/ModuleArgNode";
+import { LoopVarNode } from "./control/LoopVarNode";
+import { LoopContextNode } from "./control/LoopContextNode";
+import { LoopInputNode } from "./control/LoopInputNode";
+import { LoopExportNode } from "./control/LoopExportNode";
+import { ExpressionNode } from "./control/ExpressionNode";
+import { GeometryEditorLoopNode } from "./control/GeometryEditorLoopNode";
+import { GeometryGeneratorLoopNode } from "./control/GeometryGeneratorLoopNode";
+import { FileIteratorLoopNode } from "./control/FileIteratorLoopNode";
+import { LoopFileNode } from "./control/LoopFileNode";
 
-import { ImportSTLNode }    from './import_nodes/ImportSTLNode'
-import { SurfaceNode }      from './import_nodes/SurfaceNode'
+import { ImportSTLNode } from "./import_nodes/ImportSTLNode";
+import { SurfaceNode } from "./import_nodes/SurfaceNode";
+import { ParameterizedImportNode } from "./import_nodes/ParameterizedImportNode";
 
-import { GroupNode }        from './GroupNode'
-import { PACK_NODE_TYPES }  from '@/nodepacks'
+import { GroupNode } from "./GroupNode";
+import { PACK_NODE_TYPES } from "@/nodepacks";
 
 const coreNodeTypes: NodeTypes = {
   // 3D Primitives
-  sphere:           SphereNode,
-  cube:             CubeNode,
-  cylinder:         CylinderNode,
-  polyhedron:       PolyhedronNode,
+  sphere: SphereNode,
+  cube: CubeNode,
+  cylinder: CylinderNode,
+  polyhedron: PolyhedronNode,
 
   // 2D Primitives
-  circle:           CircleNode,
-  square:           SquareNode,
-  polygon:          PolygonNode,
-  scadtext:         ScadTextNode,
-  sketch_profile:   SketchProfileNode,
+  circle: CircleNode,
+  square: SquareNode,
+  polygon: PolygonNode,
+  scadtext: ScadTextNode,
+  sketch_profile: SketchProfileNode,
 
   // Transforms
-  translate:        TranslateNode,
-  rotate:           RotateNode,
-  scale:            ScaleNode,
-  mirror:           MirrorNode,
-  resize:           ResizeNode,
-  multmatrix:       MultmatrixNode,
-  offset:           OffsetNode,
+  translate: TranslateNode,
+  rotate: RotateNode,
+  scale: ScaleNode,
+  mirror: MirrorNode,
+  resize: ResizeNode,
+  multmatrix: MultmatrixNode,
+  offset: OffsetNode,
 
   // Booleans
-  union:            UnionNode,
-  difference:       DifferenceNode,
-  intersection:     IntersectionNode,
+  union: UnionNode,
+  difference: DifferenceNode,
+  intersection: IntersectionNode,
 
   // Extrusions
-  linear_extrude:   LinearExtrudeNode,
-  rotate_extrude:   RotateExtrudeNode,
+  linear_extrude: LinearExtrudeNode,
+  rotate_extrude: RotateExtrudeNode,
 
   // Modifiers
-  hull:             HullNode,
-  minkowski:        MinkowskiNode,
-  color:            ColorNode,
-  projection:       ProjectionNode,
-  render_node:      RenderNode,
+  hull: HullNode,
+  minkowski: MinkowskiNode,
+  color: ColorNode,
+  projection: ProjectionNode,
+  render_node: RenderNode,
 
   // Control Flow
-  for_loop:         ForLoopNode,
-  if_cond:          IfCondNode,
-  var_node:         VarNode,
-  echo_node:        EchoNode,
+  for_loop: ForLoopNode,
+  if_cond: IfCondNode,
+  var_node: VarNode,
+  echo_node: EchoNode,
   intersection_for: IntersectionForNode,
-  assert_node:      AssertNode,
-  parameter_node:   ParameterNode,
-  parameter_list:   ParameterListNode,
-  module_call:      ModuleCallNode,
-  module_arg:       ModuleArgNode,
-  loop_var:         LoopVarNode,
-  expression_node:  ExpressionNode,
+  assert_node: AssertNode,
+  parameter_node: ParameterNode,
+  parameter_list: ParameterListNode,
+  module_call: ModuleCallNode,
+  module_arg: ModuleArgNode,
+  loop_var: LoopVarNode,
+  loop_context: LoopContextNode,
+  loop_input: LoopInputNode,
+  loop_export: LoopExportNode,
+  expression_node: ExpressionNode,
+  geo_editor_loop: GeometryEditorLoopNode,
+  geo_generator_loop: GeometryGeneratorLoopNode,
+  file_iterator_loop: FileIteratorLoopNode,
+  loop_file: LoopFileNode,
 
   // Import
-  import_stl:       ImportSTLNode,
-  surface_node:     SurfaceNode,
+  import_stl: ImportSTLNode,
+  surface_node: SurfaceNode,
+  param_import: ParameterizedImportNode,
 
   // Visual groups (Node Wrangler)
-  group_node:       GroupNode,
-}
+  group_node: GroupNode,
+};
 
 // Merge pack-provided node types (MakerBeam, BOSL2, etc.) into the registry.
 // To add a new library pack, register it in web/src/nodepacks/index.ts.
-export const nodeTypes: NodeTypes = { ...coreNodeTypes, ...PACK_NODE_TYPES }
+export const nodeTypes: NodeTypes = { ...coreNodeTypes, ...PACK_NODE_TYPES };

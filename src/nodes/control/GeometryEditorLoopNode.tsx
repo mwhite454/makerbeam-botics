@@ -1,10 +1,21 @@
+/**
+ * GeometryEditorLoopNode — "Edit Loop"
+ *
+ * Iterates over a range and applies a transform to geometry fed in from
+ * outside the loop. The geometry body (in-0) is passed into the loop via
+ * children(). Use this when you have an existing shape and want to
+ * reposition / recolour / transform it on each iteration.
+ *
+ * Inputs:  geometry (in-0), start (in-1), end (in-2), step (in-3)
+ * Outputs: modified geometry (out-0)
+ */
 import { useEffect, useRef } from "react";
 import { type NodeProps } from "@xyflow/react";
 import { BaseNode, TextInput, ExpressionInput } from "../BaseNode";
 import { useEditorStore } from "@/store/editorStore";
 import type { ForLoopData } from "@/types/nodes";
+import { buildLoopSeedNodes } from "./ForLoopNode";
 
-// Always-present input handles: body geometry + range params
 const INPUT_HANDLES = [
   { id: "in-0", label: "geometry" },
   { id: "in-1", label: "start" },
@@ -12,45 +23,7 @@ const INPUT_HANDLES = [
   { id: "in-3", label: "step" },
 ];
 
-/** Shared helper: build seed nodes for a loop body tab. */
-export function buildLoopSeedNodes(
-  varName: string,
-  start: string,
-  end: string,
-  step: string,
-  includeInputNode: boolean,
-  ts: number,
-): {
-  id: string;
-  type: string;
-  position: { x: number; y: number };
-  data: Record<string, unknown>;
-}[] {
-  const nodes: {
-    id: string;
-    type: string;
-    position: { x: number; y: number };
-    data: Record<string, unknown>;
-  }[] = [
-    {
-      id: `loop_context-${ts}`,
-      type: "loop_context",
-      position: { x: 80, y: 100 },
-      data: { varName, start, end, step },
-    },
-  ];
-  if (includeInputNode) {
-    nodes.push({
-      id: `loop_input-${ts + 1}`,
-      type: "loop_input",
-      position: { x: 80, y: 270 },
-      data: {},
-    });
-  }
-  return nodes;
-}
-
-export function ForLoopNode({ id, data, selected }: NodeProps) {
+export function GeometryEditorLoopNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as ForLoopData;
 
   const setActiveTab = useEditorStore((s) => s.setActiveTab);
@@ -65,7 +38,6 @@ export function ForLoopNode({ id, data, selected }: NodeProps) {
   const createLoopBodyTab = useEditorStore((s) => s.createLoopBodyTab);
   const tabs = useEditorStore((s) => s.tabs);
 
-  // ── Auto-init: silently create the loop body tab on first mount ────────────
   const autoInitFired = useRef(false);
   useEffect(() => {
     if (autoInitFired.current) return;
@@ -73,7 +45,7 @@ export function ForLoopNode({ id, data, selected }: NodeProps) {
 
     const liveNode = useEditorStore.getState().nodes.find((n) => n.id === id);
     const liveData = liveNode?.data as Record<string, unknown> | undefined;
-    if (liveData?.bodyTabId) return; // already initialised
+    if (liveData?.bodyTabId) return;
 
     const varName = (liveData?.varName as string | undefined) || "i";
     const start = String(liveData?.start ?? 0);
@@ -81,7 +53,7 @@ export function ForLoopNode({ id, data, selected }: NodeProps) {
     const step = String(liveData?.step ?? 1);
 
     const existingLabels = useEditorStore.getState().tabs.map((t) => t.label);
-    const baseLabel = `for_${varName}`;
+    const baseLabel = `edit_${varName}`;
     let label = baseLabel;
     let suffix = 2;
     while (existingLabels.includes(label)) label = `${baseLabel}_${suffix++}`;
@@ -96,21 +68,18 @@ export function ForLoopNode({ id, data, selected }: NodeProps) {
       Date.now(),
     );
     const newTabId = createLoopBodyTab(label, seedNodes as never);
-
     updateNodeDataInTab(callerTabId, id, { bodyTabId: newTabId });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Resolve the live bodyTabId and its tab label for the indicator
-  const liveBodyTabId = d.bodyTabId;
-  const bodyTab = liveBodyTabId
-    ? tabs.find((t) => t.id === liveBodyTabId)
+  const bodyTab = d.bodyTabId
+    ? tabs.find((t) => t.id === d.bodyTabId)
     : undefined;
 
   return (
     <BaseNode
       id={id}
       category="control"
-      label="for (advanced)"
+      label="Edit Loop"
       selected={selected}
       inputHandles={INPUT_HANDLES}
     >
