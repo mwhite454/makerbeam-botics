@@ -1,40 +1,40 @@
-import { useMemo, useEffect } from 'react'
-import { type NodeProps } from '@xyflow/react'
-import { BaseNode, SelectInput } from '../BaseNode'
-import { useEditorStore } from '@/store/editorStore'
-import type { SketchProfileData } from '@/types/nodes'
+import { useMemo, useEffect } from "react";
+import { type NodeProps } from "@xyflow/react";
+import { BaseNode, SelectInput } from "../BaseNode";
+import { useEditorStore } from "@/store/editorStore";
+import type { SketchProfileData } from "@/types/nodes";
 
 export function SketchProfileNode({ id, data, selected }: NodeProps) {
-  const d = data as unknown as SketchProfileData
-  const update = useEditorStore((s) => s.updateNodeData)
-  const tabs = useEditorStore((s) => s.tabs)
-  const addTab = useEditorStore((s) => s.addTab)
+  const d = data as unknown as SketchProfileData;
+  const update = useEditorStore((s) => s.updateNodeData);
+  const tabs = useEditorStore((s) => s.tabs);
+  const addTab = useEditorStore((s) => s.addTab);
 
   const sketchNames = useMemo(
     () =>
       tabs
-        .filter((t) => t.tabType === 'sketch')
+        .filter((t) => t.tabType === "sketch")
         .map((t) => t.sketchName)
         .filter((name) => name.trim().length > 0),
     [tabs],
-  )
+  );
 
   const activeSketchName = sketchNames.includes(d.sketchName)
     ? d.sketchName
-    : (sketchNames[0] ?? '')
+    : (sketchNames[0] ?? "");
 
   // Sync fallback sketch name back to node data so codegen can find it
   useEffect(() => {
     if (activeSketchName && activeSketchName !== d.sketchName) {
-      update(id, { sketchName: activeSketchName })
+      update(id, { sketchName: activeSketchName });
     }
-  }, [activeSketchName, d.sketchName, id, update])
+  }, [activeSketchName, d.sketchName, id, update]);
 
   const handleCreateSketch = () => {
-    const name = `sketch_${tabs.filter((t) => t.tabType === 'sketch').length + 1}`
-    update(id, { sketchName: name.toLowerCase().replace(/[^a-z0-9_]/g, '_') })
-    addTab(name, 'sketch')
-  }
+    const name = `sketch_${tabs.filter((t) => t.tabType === "sketch").length + 1}`;
+    update(id, { sketchName: name.toLowerCase().replace(/[^a-z0-9_]/g, "_") });
+    addTab(name, "sketch");
+  };
 
   return (
     <BaseNode
@@ -63,5 +63,5 @@ export function SketchProfileNode({ id, data, selected }: NodeProps) {
         </div>
       )}
     </BaseNode>
-  )
+  );
 }
