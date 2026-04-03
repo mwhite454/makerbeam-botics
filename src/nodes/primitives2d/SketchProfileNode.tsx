@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { type NodeProps } from '@xyflow/react'
 import { BaseNode, SelectInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
@@ -22,6 +22,13 @@ export function SketchProfileNode({ id, data, selected }: NodeProps) {
   const activeSketchName = sketchNames.includes(d.sketchName)
     ? d.sketchName
     : (sketchNames[0] ?? '')
+
+  // Sync fallback sketch name back to node data so codegen can find it
+  useEffect(() => {
+    if (activeSketchName && activeSketchName !== d.sketchName) {
+      update(id, { sketchName: activeSketchName })
+    }
+  }, [activeSketchName, d.sketchName, id, update])
 
   const handleCreateSketch = () => {
     const name = `sketch_${tabs.filter((t) => t.tabType === 'sketch').length + 1}`

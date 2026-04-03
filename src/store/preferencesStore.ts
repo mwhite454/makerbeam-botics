@@ -1,24 +1,24 @@
-import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
-export type AutoSaveInterval = 'off' | 10_000 | 30_000 | 60_000 | 300_000
+export type AutoSaveInterval = "off" | 10_000 | 30_000 | 60_000 | 300_000;
 
 interface StoredViewport {
-  x: number
-  y: number
-  zoom: number
+  x: number;
+  y: number;
+  zoom: number;
 }
 
 interface PreferencesState {
-  autoSaveEnabled: boolean
-  autoSaveIntervalMs: AutoSaveInterval
-  lastViewport: StoredViewport
-  stripHaltsOnExport: boolean
+  autoSaveEnabled: boolean;
+  autoSaveIntervalMs: AutoSaveInterval;
+  lastViewport: StoredViewport;
+  stripHaltsOnExport: boolean;
 
-  setAutoSaveEnabled: (v: boolean) => void
-  setAutoSaveIntervalMs: (ms: AutoSaveInterval) => void
-  setLastViewport: (vp: StoredViewport) => void
-  setStripHaltsOnExport: (v: boolean) => void
+  setAutoSaveEnabled: (v: boolean) => void;
+  setAutoSaveIntervalMs: (ms: AutoSaveInterval) => void;
+  setLastViewport: (vp: StoredViewport) => void;
+  setStripHaltsOnExport: (v: boolean) => void;
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -35,8 +35,8 @@ export const usePreferencesStore = create<PreferencesState>()(
       setStripHaltsOnExport: (v) => set({ stripHaltsOnExport: v }),
     }),
     {
-      name: 'makerbeam-preferences',
+      name: "makerbeam-preferences",
       storage: createJSONStorage(() => localStorage),
-    }
-  )
-)
+    },
+  ),
+);

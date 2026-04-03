@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useMemo, createContext } from 'react'
+import { useCallback, useRef, useState, useMemo } from "react";
 import {
   ReactFlow,
   Background,
@@ -8,203 +8,257 @@ import {
   type ReactFlowInstance,
   type Viewport,
   BackgroundVariant,
-} from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 
-import { useEditorStore }    from '@/store/editorStore'
-import { usePreferencesStore } from '@/store/preferencesStore'
-import { nodeTypes }         from '@/nodes'
-import { PALETTE_ITEMS }     from '@/types/nodes'
-import { PACK_PALETTE_ITEMS } from '@/nodepacks'
-import { DeletableEdge }     from '@/components/DeletableEdge'
-import { SearchBar }         from '@/components/SearchBar'
-import { ContextMenu }       from '@/components/panels/ContextMenu'
-import { computeDownstreamOfHalts } from '@/utils/haltGraph'
+import { useEditorStore } from "@/store/editorStore";
+import { usePreferencesStore } from "@/store/preferencesStore";
+import { nodeTypes } from "@/nodes";
+import { PALETTE_ITEMS } from "@/types/nodes";
+import { PACK_PALETTE_ITEMS } from "@/nodepacks";
+import { DeletableEdge } from "@/components/DeletableEdge";
+import { SearchBar } from "@/components/SearchBar";
+import { ContextMenu } from "@/components/panels/ContextMenu";
+import { computeDownstreamOfHalts } from "@/utils/haltGraph";
+import { HaltDimmedContext } from "@/contexts/HaltDimmedContext";
 
-export const HaltDimmedContext = createContext<Set<string>>(new Set())
+const edgeTypes = { default: DeletableEdge };
+const ALL_PALETTE_ITEMS = [...PALETTE_ITEMS, ...PACK_PALETTE_ITEMS];
 
-const edgeTypes = { default: DeletableEdge }
-const ALL_PALETTE_ITEMS = [...PALETTE_ITEMS, ...PACK_PALETTE_ITEMS]
-
-let nodeIdCounter = 1
+let nodeIdCounter = 1;
 
 export function EditorPanel() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useEditorStore()
-  const updateNodeData = useEditorStore((s) => s.updateNodeData)
-  const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes)
-  const toggleNodeHalted = useEditorStore((s) => s.toggleNodeHalted)
-  const rfInstance = useRef<ReactFlowInstance | null>(null)
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } =
+    useEditorStore();
+  const updateNodeData = useEditorStore((s) => s.updateNodeData);
+  const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes);
+  const toggleNodeHalted = useEditorStore((s) => s.toggleNodeHalted);
+  const rfInstance = useRef<ReactFlowInstance | null>(null);
 
   // Compute downstream dimmed set
   const dimmedNodeIds = useMemo(() => {
     const haltedIds = nodes
       .filter((n) => (n.data as Record<string, unknown>)._halted)
-      .map((n) => n.id)
-    return computeDownstreamOfHalts(haltedIds, edges)
-  }, [nodes, edges])
+      .map((n) => n.id);
+    return computeDownstreamOfHalts(haltedIds, edges);
+  }, [nodes, edges]);
 
-  const lastViewport    = usePreferencesStore((s) => s.lastViewport)
-  const setLastViewport = usePreferencesStore((s) => s.setLastViewport)
+  const lastViewport = usePreferencesStore((s) => s.lastViewport);
+  const setLastViewport = usePreferencesStore((s) => s.setLastViewport);
 
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }, [])
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
-      event.preventDefault()
-      const nodeType = event.dataTransfer.getData('application/reactflow-nodetype')
-      if (!nodeType || !rfInstance.current) return
+      event.preventDefault();
+      const nodeType = event.dataTransfer.getData(
+        "application/reactflow-nodetype",
+      );
+      if (!nodeType || !rfInstance.current) return;
 
-      const paletteItem = ALL_PALETTE_ITEMS.find((p) => p.type === nodeType)
-      if (!paletteItem) return
+      const paletteItem = ALL_PALETTE_ITEMS.find((p) => p.type === nodeType);
+      if (!paletteItem) return;
 
       const position = rfInstance.current.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
-      })
+      });
 
       const newNode: Node = {
         id: `${nodeType}-${nodeIdCounter++}`,
         type: nodeType,
         position,
         data: { ...paletteItem.defaultData },
-      }
+      };
 
-      addNode(newNode)
+      addNode(newNode);
     },
-    [addNode]
-  )
+    [addNode],
+  );
 
   // Keyboard handler for node/edge deletion, grouping, and halt toggle
-  const onKeyDown = useCallback((event: React.KeyboardEvent) => {
-    const target = event.target as HTMLElement
-    const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT'
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      const isInputFocused =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT";
 
-    if (event.key === 'Delete' || event.key === 'Backspace') {
-      // Don't delete if an input is focused
-      if (isInputFocused) {
-        return
+      if (event.key === "Delete" || event.key === "Backspace") {
+        // Don't delete if an input is focused
+        if (isInputFocused) {
+          return;
+        }
+        // ReactFlow handles this via onNodesChange/onEdgesChange with remove changes
       }
-      // ReactFlow handles this via onNodesChange/onEdgesChange with remove changes
-    }
-    // Ctrl+G: group selected nodes
-    if ((event.ctrlKey || event.metaKey) && event.key === 'g') {
-      event.preventDefault()
-      groupSelectedNodes()
-    }
-    // H: toggle halt on selected nodes
-    if (event.key === 'h' && !event.ctrlKey && !event.metaKey && !event.altKey && !isInputFocused) {
-      const selected = useEditorStore.getState().nodes.filter((n) => n.selected)
-      for (const node of selected) {
-        toggleNodeHalted(node.id)
+      // Ctrl+G: group selected nodes
+      if ((event.ctrlKey || event.metaKey) && event.key === "g") {
+        event.preventDefault();
+        groupSelectedNodes();
       }
-    }
-  }, [groupSelectedNodes, toggleNodeHalted])
+      // H: toggle halt on selected nodes
+      if (
+        event.key === "h" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !isInputFocused
+      ) {
+        const selected = useEditorStore
+          .getState()
+          .nodes.filter((n) => n.selected);
+        for (const node of selected) {
+          toggleNodeHalted(node.id);
+        }
+      }
+    },
+    [groupSelectedNodes, toggleNodeHalted],
+  );
 
-  const onMoveEnd = useCallback((_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
-    setLastViewport(vp)
-  }, [setLastViewport])
+  const onMoveEnd = useCallback(
+    (_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
+      setLastViewport(vp);
+    },
+    [setLastViewport],
+  );
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const selected = useEditorStore.getState().nodes.filter((n) => n.selected)
-    if (selected.length < 2) return
-    setContextMenu({ x: e.clientX, y: e.clientY })
-  }, [])
+    e.preventDefault();
+    const selected = useEditorStore.getState().nodes.filter((n) => n.selected);
+    if (selected.length < 2) return;
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
 
   return (
     <HaltDimmedContext.Provider value={dimmedNodeIds}>
-    <div className="flex-1 relative bg-gray-950">
-      <SearchBar
-        nodes={nodes}
-        updateNodeData={updateNodeData as (id: string, data: Record<string, unknown>) => void}
-        rfInstance={rfInstance}
-      />
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onInit={(instance) => { rfInstance.current = instance }}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-        onKeyDown={onKeyDown}
-        onMoveEnd={onMoveEnd}
-        onContextMenu={onContextMenu}
-        defaultViewport={lastViewport}
-        deleteKeyCode={['Delete', 'Backspace']}
-        edgesFocusable
-        multiSelectionKeyCode="Shift"
-        selectionKeyCode="Shift"
-        className="bg-gray-950"
-        defaultEdgeOptions={{
-          type: 'default',
-          selectable: true,
-          focusable: true,
-          style: { stroke: '#60a5fa', strokeWidth: 2 },
-          animated: false,
-        }}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          color="#374151"
+      <div className="flex-1 relative bg-gray-950">
+        <SearchBar
+          nodes={nodes}
+          updateNodeData={
+            updateNodeData as (
+              id: string,
+              data: Record<string, unknown>,
+            ) => void
+          }
+          rfInstance={rfInstance}
         />
-        <Controls
-          className="!bg-gray-900 !border-gray-700 [&_button]:!bg-gray-800 [&_button]:!border-gray-700 [&_button]:!text-gray-300 [&_button:hover]:!bg-gray-700"
-        />
-        <MiniMap
-          className="!bg-gray-900 !border-gray-700"
-          nodeColor={(node) => {
-            const colors: Record<string, string> = {
-              sphere: '#2563eb', cube: '#2563eb', cylinder: '#2563eb', polyhedron: '#2563eb',
-              circle: '#0891b2', square: '#0891b2', polygon: '#0891b2', scadtext: '#0891b2',
-              translate: '#f97316', rotate: '#f97316', scale: '#f97316', mirror: '#f97316',
-              resize: '#f97316', multmatrix: '#f97316', offset: '#f97316',
-              union: '#dc2626', difference: '#dc2626', intersection: '#dc2626',
-              linear_extrude: '#9333ea', rotate_extrude: '#9333ea',
-              hull: '#16a34a', minkowski: '#16a34a', color: '#16a34a', projection: '#16a34a',
-              makerbeam: '#eab308',
-              for_loop: '#f97316', if_cond: '#f97316', render_node: '#16a34a',
-              import_stl: '#6b7280', surface_node: '#6b7280',
-              echo_node: '#6b7280', var_node: '#6b7280',
-            }
-            return colors[node.type ?? ''] ?? '#6b7280'
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onInit={(instance) => {
+            rfInstance.current = instance;
           }}
-          maskColor="rgba(0,0,0,0.5)"
-        />
-      </ReactFlow>
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+          onKeyDown={onKeyDown}
+          onMoveEnd={onMoveEnd}
+          onContextMenu={onContextMenu}
+          defaultViewport={lastViewport}
+          deleteKeyCode={["Delete", "Backspace"]}
+          edgesFocusable
+          multiSelectionKeyCode="Shift"
+          selectionKeyCode="Shift"
+          className="bg-gray-950"
+          defaultEdgeOptions={{
+            type: "default",
+            selectable: true,
+            focusable: true,
+            style: { stroke: "#60a5fa", strokeWidth: 2 },
+            animated: false,
+          }}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color="#374151"
+          />
+          <Controls className="!bg-gray-900 !border-gray-700 [&_button]:!bg-gray-800 [&_button]:!border-gray-700 [&_button]:!text-gray-300 [&_button:hover]:!bg-gray-700" />
+          <MiniMap
+            className="!bg-gray-900 !border-gray-700"
+            nodeColor={(node) => {
+              const colors: Record<string, string> = {
+                sphere: "#2563eb",
+                cube: "#2563eb",
+                cylinder: "#2563eb",
+                polyhedron: "#2563eb",
+                circle: "#0891b2",
+                square: "#0891b2",
+                polygon: "#0891b2",
+                scadtext: "#0891b2",
+                translate: "#f97316",
+                rotate: "#f97316",
+                scale: "#f97316",
+                mirror: "#f97316",
+                resize: "#f97316",
+                multmatrix: "#f97316",
+                offset: "#f97316",
+                union: "#dc2626",
+                difference: "#dc2626",
+                intersection: "#dc2626",
+                linear_extrude: "#9333ea",
+                rotate_extrude: "#9333ea",
+                hull: "#16a34a",
+                minkowski: "#16a34a",
+                color: "#16a34a",
+                projection: "#16a34a",
+                makerbeam: "#eab308",
+                for_loop: "#f97316",
+                if_cond: "#f97316",
+                render_node: "#16a34a",
+                import_stl: "#6b7280",
+                surface_node: "#6b7280",
+                echo_node: "#6b7280",
+                var_node: "#6b7280",
+              };
+              return colors[node.type ?? ""] ?? "#6b7280";
+            }}
+            maskColor="rgba(0,0,0,0.5)"
+          />
+        </ReactFlow>
 
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onGroupNodes={groupSelectedNodes}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onGroupNodes={groupSelectedNodes}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
 
-      {/* Empty state hint */}
-      {nodes.length === 0 && (
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <div className="text-center text-gray-600">
-            <div className="text-4xl mb-3">⬡</div>
-            <p className="text-sm font-medium text-gray-500">Drag nodes from the palette</p>
-            <p className="text-xs text-gray-600 mt-1">Connect nodes to build OpenSCAD geometry</p>
-            <p className="text-xs text-gray-600 mt-1">Select nodes and press Delete to remove them</p>
+        {/* Empty state hint */}
+        {nodes.length === 0 && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="text-center text-gray-600">
+              <div className="text-4xl mb-3">⬡</div>
+              <p className="text-sm font-medium text-gray-500">
+                Drag nodes from the palette
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Connect nodes to build OpenSCAD geometry
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Select nodes and press Delete to remove them
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </HaltDimmedContext.Provider>
-  )
+  );
 }
