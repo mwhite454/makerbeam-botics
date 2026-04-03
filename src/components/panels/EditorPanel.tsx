@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useMemo, createContext } from 'react'
 import {
   ReactFlow,
   Background,
@@ -19,6 +19,9 @@ import { PACK_PALETTE_ITEMS } from '@/nodepacks'
 import { DeletableEdge }     from '@/components/DeletableEdge'
 import { SearchBar }         from '@/components/SearchBar'
 import { ContextMenu }       from '@/components/panels/ContextMenu'
+import { computeDownstreamOfHalts } from '@/utils/haltGraph'
+
+export const HaltDimmedContext = createContext<Set<string>>(new Set())
 
 const edgeTypes = { default: DeletableEdge }
 const ALL_PALETTE_ITEMS = [...PALETTE_ITEMS, ...PACK_PALETTE_ITEMS]
@@ -29,7 +32,16 @@ export function EditorPanel() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } = useEditorStore()
   const updateNodeData = useEditorStore((s) => s.updateNodeData)
   const groupSelectedNodes = useEditorStore((s) => s.groupSelectedNodes)
+  const toggleNodeHalted = useEditorStore((s) => s.toggleNodeHalted)
   const rfInstance = useRef<ReactFlowInstance | null>(null)
+
+  // Compute downstream dimmed set
+  const dimmedNodeIds = useMemo(() => {
+    const haltedIds = nodes
+      .filter((n) => (n.data as Record<string, unknown>)._halted)
+      .map((n) => n.id)
+    return computeDownstreamOfHalts(haltedIds, edges)
+  }, [nodes, edges])
 
   const lastViewport    = usePreferencesStore((s) => s.lastViewport)
   const setLastViewport = usePreferencesStore((s) => s.setLastViewport)
@@ -67,12 +79,14 @@ export function EditorPanel() {
     [addNode]
   )
 
-  // Keyboard handler for node/edge deletion and grouping
+  // Keyboard handler for node/edge deletion, grouping, and halt toggle
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
+    const target = event.target as HTMLElement
+    const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT'
+
     if (event.key === 'Delete' || event.key === 'Backspace') {
       // Don't delete if an input is focused
-      const target = event.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      if (isInputFocused) {
         return
       }
       // ReactFlow handles this via onNodesChange/onEdgesChange with remove changes
@@ -82,7 +96,14 @@ export function EditorPanel() {
       event.preventDefault()
       groupSelectedNodes()
     }
-  }, [groupSelectedNodes])
+    // H: toggle halt on selected nodes
+    if (event.key === 'h' && !event.ctrlKey && !event.metaKey && !event.altKey && !isInputFocused) {
+      const selected = useEditorStore.getState().nodes.filter((n) => n.selected)
+      for (const node of selected) {
+        toggleNodeHalted(node.id)
+      }
+    }
+  }, [groupSelectedNodes, toggleNodeHalted])
 
   const onMoveEnd = useCallback((_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
     setLastViewport(vp)
@@ -96,6 +117,7 @@ export function EditorPanel() {
   }, [])
 
   return (
+    <HaltDimmedContext.Provider value={dimmedNodeIds}>
     <div className="flex-1 relative bg-gray-950">
       <SearchBar
         nodes={nodes}
@@ -183,5 +205,6 @@ export function EditorPanel() {
         </div>
       )}
     </div>
+    </HaltDimmedContext.Provider>
   )
 }

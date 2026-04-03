@@ -43,17 +43,21 @@ export function Toolbar({ onRender }: ToolbarProps) {
     setPreviewMode, setAutoRender, toggleCodePanel,
     exportProject, importProject,
     projectName, setProjectName, resetProject,
+    clearAllHalts,
   } = useEditorStore()
+  const hasHalts = useEditorStore((s) => s.nodes.some((n) => (n.data as Record<string, unknown>)._halted))
 
   const autoSaveEnabled    = usePreferencesStore((s) => s.autoSaveEnabled)
   const autoSaveIntervalMs = usePreferencesStore((s) => s.autoSaveIntervalMs)
   const setAutoSaveEnabled    = usePreferencesStore((s) => s.setAutoSaveEnabled)
   const setAutoSaveIntervalMs = usePreferencesStore((s) => s.setAutoSaveIntervalMs)
+  const stripHaltsOnExport    = usePreferencesStore((s) => s.stripHaltsOnExport)
+  const setStripHaltsOnExport = usePreferencesStore((s) => s.setStripHaltsOnExport)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
-    const json = exportProject()
+    const json = exportProject(stripHaltsOnExport)
     const blob = new Blob([json], { type: 'application/json' })
     const url  = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -184,6 +188,28 @@ export function Toolbar({ onRender }: ToolbarProps) {
           onChange={(e) => setAutoRender(e.target.checked)}
         />
         Auto-render
+      </label>
+
+      {/* Halt controls */}
+      {hasHalts && (
+        <button
+          className="px-2 py-1 rounded text-[11px] font-semibold bg-red-600/80 hover:bg-red-500 text-white transition-colors"
+          onClick={clearAllHalts}
+          title="Remove all halt breakpoints"
+        >
+          Clear Halts
+        </button>
+      )}
+
+      {/* Strip halts on export */}
+      <label className="flex items-center gap-1.5 text-[11px] text-gray-400 cursor-pointer" title="Remove halt debug flags when saving to file">
+        <input
+          type="checkbox"
+          className="accent-red-400"
+          checked={stripHaltsOnExport}
+          onChange={(e) => setStripHaltsOnExport(e.target.checked)}
+        />
+        Strip halts
       </label>
 
       {/* Manual render button */}

@@ -6,9 +6,13 @@ import {
   type EdgeProps,
   type Edge,
 } from '@xyflow/react'
+import { useContext } from 'react'
+import { HaltDimmedContext } from '@/components/panels/EditorPanel'
 
 export function DeletableEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -20,6 +24,8 @@ export function DeletableEdge({
   selected,
 }: EdgeProps<Edge>) {
   const { deleteElements } = useReactFlow()
+  const dimmedNodeIds = useContext(HaltDimmedContext)
+  const isDimmed = dimmedNodeIds.has(source) || dimmedNodeIds.has(target)
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -39,7 +45,7 @@ export function DeletableEdge({
         strokeWidth={20}
         className="react-flow__edge-interaction"
       />
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={{ ...style, ...(isDimmed ? { opacity: 0.25 } : {}) }} />
       {selected && (
         <EdgeLabelRenderer>
           <div

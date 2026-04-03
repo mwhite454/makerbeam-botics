@@ -842,9 +842,20 @@ export function generateCode(
 
   const nodesMap = new Map(codeNodes.map((n) => [n.id, n]));
   const childrenOf = buildAdjacency(edges);
-  const roots = findRoots(codeNodes, edges);
+  let roots = findRoots(codeNodes, edges);
+
+  // Halt flow: if any nodes are halted, they replace the root set.
+  // Only the upstream subgraphs leading to halted nodes are emitted.
+  const haltedIds = codeNodes
+    .filter((n) => (n.data as Record<string, unknown>)._halted === true)
+    .map((n) => n.id);
 
   let code = "";
+
+  if (haltedIds.length > 0) {
+    roots = haltedIds;
+    code += `// HALT: isolating ${haltedIds.length} node(s)\n`;
+  }
 
   // Emit global parameters first (top-level declarations)
   if (globalParameters && globalParameters.length > 0) {

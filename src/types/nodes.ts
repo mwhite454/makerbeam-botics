@@ -260,6 +260,7 @@ export interface NodeMeta {
   nodeName?: string;
   nodeTags?: string[];
   _searchMatch?: boolean;
+  _halted?: boolean;
 }
 
 // ─── Group node data ─────────────────────────────────────────────────────────

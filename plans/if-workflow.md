@@ -1,0 +1,5 @@
+The current IF node is not in a usable state. The drop down input for IF is just true false. To be actually meaningful, the IF node needs an expression editor that is connected to global parameters and any variables declared in Main. 
+
+IF node should take input from prior on its first edge and have a YES/NO output edge that makes it clear for users that this is the outcome of the expression evaluation. I know this does not match the openscad if paradigm entirely, but that will be on our codegen capacity to overcome since we have more scripting power in JS so we can do some operations and then output results as correct openscad. 
+
+Example: Within a for loop that is creating 5 centered cubes then translating them. I want the IF block to check if the i is greater than 1/2 of the total steps to determine if I want to translate in a negative x direction from center. If greater than 1/2 its positive, and if its in between, (ie. the third cube) recieves no translation. Mathematically this isn't terribly complicated, but right now we can't do something even this simple in the node editor. 

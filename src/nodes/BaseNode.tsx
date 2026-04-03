@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useRef, useEffect, useCallback, useContext } from 'react'
 import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react'
 import { CATEGORY_COLORS, CATEGORY_TEXT } from '@/types/nodes'
 import { NodeMetaFields } from '@/components/NodeMetaFields'
 import { useEditorStore } from '@/store/editorStore'
+import { HaltDimmedContext } from '@/components/panels/EditorPanel'
 
 interface HandleConfig {
   id: string
@@ -38,12 +39,21 @@ export function BaseNode({
   const nodeName = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeName as string | undefined)
   const nodeTags = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?.nodeTags as string[] | undefined)
   const searchMatch = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?._searchMatch as boolean | undefined)
+  const isHalted = useEditorStore((s) => (s.nodes.find((n) => n.id === id)?.data as Record<string, unknown> | undefined)?._halted as boolean | undefined)
+  const toggleNodeHalted = useEditorStore((s) => s.toggleNodeHalted)
+  const dimmedNodeIds = useContext(HaltDimmedContext)
+  const isDimmed = dimmedNodeIds.has(id)
 
   const nodeRef = useRef<HTMLDivElement>(null)
 
   const onDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
     deleteElements({ nodes: [{ id }] })
+  }
+
+  const onToggleHalt = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleNodeHalted(id)
   }
 
   // Tab: cycle through inputs within this node; Shift+Tab goes backward
@@ -80,25 +90,41 @@ export function BaseNode({
       onKeyDown={handleNodeKeyDown}
       className={`
         rounded-lg shadow-xl border transition-all
-        ${searchMatch
-          ? 'border-yellow-400 shadow-yellow-400/30 ring-2 ring-yellow-400/60'
-          : selected
-            ? 'border-white/60 shadow-white/20 ring-1 ring-blue-400/50'
-            : 'border-white/10 shadow-black/40'}
+        ${isHalted
+          ? 'border-red-500/70 shadow-red-500/20 ring-1 ring-red-500/40'
+          : searchMatch
+            ? 'border-yellow-400 shadow-yellow-400/30 ring-2 ring-yellow-400/60'
+            : selected
+              ? 'border-white/60 shadow-white/20 ring-1 ring-blue-400/50'
+              : 'border-white/10 shadow-black/40'}
         bg-gray-900/95 backdrop-blur-sm
+        ${isDimmed ? 'opacity-40' : ''}
       `}
       style={{ minWidth: 210 }}
     >
       {/* Header */}
       <div className={`${headerColor} ${textColor} px-3 py-1.5 text-xs font-bold tracking-wide uppercase select-none rounded-t-lg flex items-center justify-between`}>
         <span>{nodeName || label}</span>
-        <button
-          onClick={onDelete}
-          className="ml-2 opacity-50 hover:opacity-100 transition-opacity text-sm leading-none nodrag nopan"
-          title="Remove node"
-        >
-          ✕
-        </button>
+        <div className="flex items-center">
+          <button
+            onClick={onToggleHalt}
+            className={`transition-opacity text-sm leading-none nodrag nopan ${
+              isHalted
+                ? 'opacity-100 text-red-400 drop-shadow-[0_0_4px_rgba(248,113,113,0.6)]'
+                : 'opacity-30 hover:opacity-60'
+            }`}
+            title={isHalted ? 'Release halt (render resumes past this node)' : 'Halt here (render stops at this node)'}
+          >
+            ⏸
+          </button>
+          <button
+            onClick={onDelete}
+            className="ml-2 opacity-50 hover:opacity-100 transition-opacity text-sm leading-none nodrag nopan"
+            title="Remove node"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Name / Tags */}

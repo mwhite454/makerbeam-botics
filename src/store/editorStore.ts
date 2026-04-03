@@ -169,8 +169,12 @@ interface EditorState {
   addImportedFile: (filename: string, data: ArrayBuffer) => void;
   removeImportedFile: (filename: string) => void;
 
+  // ── Halt flow ───────────────────────────────────────────────────────────────
+  toggleNodeHalted: (nodeId: string) => void;
+  clearAllHalts: () => void;
+
   // ── Save/load ───────────────────────────────────────────────────────────────
-  exportProject: () => string;
+  exportProject: (stripHalts?: boolean) => string;
   importProject: (json: string) => void;
 }
 
@@ -689,8 +693,25 @@ export const useEditorStore = create<EditorState>()(
           delete state.importedFiles[filename];
         }),
 
+      // ── Halt flow ───────────────────────────────────────────────────────────
+      toggleNodeHalted: (nodeId) =>
+        set((state) => {
+          const node = state.nodes.find((n) => n.id === nodeId);
+          if (node) {
+            const d = node.data as Record<string, unknown>;
+            d._halted = !d._halted;
+          }
+        }),
+
+      clearAllHalts: () =>
+        set((state) => {
+          for (const node of state.nodes) {
+            (node.data as Record<string, unknown>)._halted = false;
+          }
+        }),
+
       // ── Save / load ─────────────────────────────────────────────────────────
-      exportProject: () => {
+      exportProject: (stripHalts) => {
         const state = get();
         // Save current tab's nodes first
         const tabs = state.tabs.map((tab) => {
@@ -699,11 +720,23 @@ export const useEditorStore = create<EditorState>()(
           }
           return tab;
         });
+
+        // Optionally strip _halted flags for clean export
+        const exportTabs = stripHalts
+          ? tabs.map((tab) => ({
+              ...tab,
+              nodes: tab.nodes.map((n) => {
+                const { _halted, ...rest } = n.data as Record<string, unknown>;
+                return { ...n, data: rest };
+              }),
+            }))
+          : tabs;
+
         return JSON.stringify(
           {
             version: 1,
             projectName: state.projectName,
-            tabs,
+            tabs: exportTabs,
             activeTabId: state.activeTabId,
             globalParameters: state.globalParameters,
             importedFiles: state.importedFiles,

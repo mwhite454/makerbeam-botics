@@ -13,10 +13,12 @@ interface PreferencesState {
   autoSaveEnabled: boolean
   autoSaveIntervalMs: AutoSaveInterval
   lastViewport: StoredViewport
+  stripHaltsOnExport: boolean
 
   setAutoSaveEnabled: (v: boolean) => void
   setAutoSaveIntervalMs: (ms: AutoSaveInterval) => void
   setLastViewport: (vp: StoredViewport) => void
+  setStripHaltsOnExport: (v: boolean) => void
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -25,10 +27,12 @@ export const usePreferencesStore = create<PreferencesState>()(
       autoSaveEnabled: true,
       autoSaveIntervalMs: 30_000,
       lastViewport: { x: 0, y: 0, zoom: 1 },
+      stripHaltsOnExport: false,
 
       setAutoSaveEnabled: (v) => set({ autoSaveEnabled: v }),
       setAutoSaveIntervalMs: (ms) => set({ autoSaveIntervalMs: ms }),
       setLastViewport: (vp) => set({ lastViewport: vp }),
+      setStripHaltsOnExport: (v) => set({ stripHaltsOnExport: v }),
     }),
     {
       name: 'makerbeam-preferences',
