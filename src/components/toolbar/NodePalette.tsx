@@ -3,6 +3,7 @@ import { PALETTE_ITEMS, CATEGORY_COLORS, CATEGORY_TEXT, CATEGORY_LABELS, type Pa
 import { PACK_PALETTE_ITEMS, PACK_CATEGORY_ORDER, PACK_CATEGORY_COLORS, PACK_CATEGORY_TEXT, PACK_CATEGORY_LABELS } from '@/nodepacks'
 import { useEditorStore } from '@/store/editorStore'
 import { NodeTooltipPopover } from './NodeTooltipPopover'
+import { useTouchNodeDrop } from '@/hooks/useTouchNodeDrop'
 
 const CORE_CATEGORY_ORDER: string[] = [
   'primitive3d',
@@ -38,6 +39,7 @@ export function NodePalette() {
 
   const [tooltip, setTooltip] = useState<{ item: PaletteItem; rect: DOMRect } | null>(null)
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { handleTouchStart } = useTouchNodeDrop()
 
   const handleMouseEnter = useCallback((e: React.MouseEvent, item: PaletteItem) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -85,6 +87,9 @@ export function NodePalette() {
                   onDragStart={(e) => onDragStart(e, item.type)}
                   onMouseEnter={(e) => handleMouseEnter(e, item)}
                   onMouseLeave={handleMouseLeave}
+                  onTouchStart={(e) =>
+                    handleTouchStart(e, item.type, item.defaultData as Record<string, unknown>, item.label)
+                  }
                   className={`
                     cursor-grab active:cursor-grabbing
                     ${ALL_CATEGORY_COLORS[item.category]} ${ALL_CATEGORY_TEXT[item.category]}

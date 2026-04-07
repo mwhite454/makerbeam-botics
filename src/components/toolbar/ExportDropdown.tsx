@@ -106,16 +106,21 @@ export function ExportDropdown() {
   const tabs = useEditorStore((s) => s.tabs)
   const activeTabId = useEditorStore((s) => s.activeTabId)
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or tap
   useEffect(() => {
     if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      const target = e instanceof TouchEvent ? e.touches[0]?.target : e.target
+      if (dropdownRef.current && target && !dropdownRef.current.contains(target as Node)) {
         setOpen(false)
       }
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('mousedown', handler as EventListener)
+    document.addEventListener('touchstart', handler as EventListener)
+    return () => {
+      document.removeEventListener('mousedown', handler as EventListener)
+      document.removeEventListener('touchstart', handler as EventListener)
+    }
   }, [open])
 
   const openSketchModal = (format: SketchFormat) => {
