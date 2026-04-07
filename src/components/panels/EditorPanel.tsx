@@ -133,10 +133,12 @@ export function EditorPanel() {
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    // If already shown via long-press (iPadOS 16+ fires contextmenu after long-press too)
+    if (contextMenu) return;
     const selected = useEditorStore.getState().nodes.filter((n) => n.selected);
     if (selected.length < 2) return;
     setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
+  }, [contextMenu]);
 
   // Long-press on the canvas shows the context menu on touch devices
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
