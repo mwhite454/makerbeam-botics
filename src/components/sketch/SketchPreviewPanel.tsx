@@ -18,6 +18,8 @@ function SvgViewer({ svg }: { svg: string }) {
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef({ x: 0, y: 0, tx: 0, ty: 0 })
+  // Touch state for pinch-zoom
+  const pinchRef = useRef<{ dist: number; midX: number; midY: number; tx: number; ty: number; sc: number } | null>(null)
 
   // Wheel zoom (zoom toward cursor)
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -58,6 +60,66 @@ function SvgViewer({ svg }: { svg: string }) {
 
   const onMouseUp = useCallback(() => {
     setIsPanning(false)
+  }, [])
+
+  // ── Touch handlers ──────────────────────────────────────────────────────────
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault()
+    if (e.touches.length === 1) {
+      const t = e.touches[0]
+      setIsPanning(true)
+      setTranslate((prev) => {
+        panStart.current = { x: t.clientX, y: t.clientY, tx: prev.x, ty: prev.y }
+        return prev
+      })
+      pinchRef.current = null
+    } else if (e.touches.length === 2) {
+      setIsPanning(false)
+      const [a, b] = [e.touches[0], e.touches[1]]
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
+      const midX = (a.clientX + b.clientX) / 2
+      const midY = (a.clientY + b.clientY) / 2
+      const container = containerRef.current
+      if (container) {
+        const rect = container.getBoundingClientRect()
+        setTranslate((prev) => {
+          setScale((sc) => {
+            pinchRef.current = { dist, midX: midX - rect.left, midY: midY - rect.top, tx: prev.x, ty: prev.y, sc }
+            return sc
+          })
+          return prev
+        })
+      }
+    }
+  }, [])
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault()
+    if (e.touches.length === 1 && pinchRef.current === null) {
+      if (!isPanning) return
+      const t = e.touches[0]
+      setTranslate({
+        x: panStart.current.tx + (t.clientX - panStart.current.x),
+        y: panStart.current.ty + (t.clientY - panStart.current.y),
+      })
+    } else if (e.touches.length === 2 && pinchRef.current !== null) {
+      const [a, b] = [e.touches[0], e.touches[1]]
+      const newDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
+      const { dist: startDist, midX, midY, tx, ty, sc: startScale } = pinchRef.current
+      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, startScale * (newDist / startDist)))
+      const ratio = newScale / startScale
+      setScale(newScale)
+      setTranslate({
+        x: midX - ratio * (midX - tx),
+        y: midY - ratio * (midY - ty),
+      })
+    }
+  }, [isPanning])
+
+  const onTouchEnd = useCallback(() => {
+    setIsPanning(false)
+    pinchRef.current = null
   }, [])
 
   // Fit to view
@@ -115,6 +177,7 @@ function SvgViewer({ svg }: { svg: string }) {
         className="w-full h-full"
         style={{
           cursor: isPanning ? 'grabbing' : 'grab',
+          touchAction: 'none',
           backgroundImage: [
             'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
             'linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
@@ -127,6 +190,9 @@ function SvgViewer({ svg }: { svg: string }) {
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <div
           ref={contentRef}
@@ -144,21 +210,21 @@ function SvgViewer({ svg }: { svg: string }) {
       <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
         <button
           onClick={() => setScale((s) => Math.min(MAX_ZOOM, s + ZOOM_STEP * s))}
-          className="w-7 h-7 bg-gray-800/90 border border-gray-700 rounded text-gray-300 hover:bg-gray-700 text-sm flex items-center justify-center"
+          className="w-10 h-10 bg-gray-800/90 border border-gray-700 rounded text-gray-300 hover:bg-gray-700 text-sm flex items-center justify-center"
           title="Zoom in"
         >
           +
         </button>
         <button
           onClick={() => setScale((s) => Math.max(MIN_ZOOM, s - ZOOM_STEP * s))}
-          className="w-7 h-7 bg-gray-800/90 border border-gray-700 rounded text-gray-300 hover:bg-gray-700 text-sm flex items-center justify-center"
+          className="w-10 h-10 bg-gray-800/90 border border-gray-700 rounded text-gray-300 hover:bg-gray-700 text-sm flex items-center justify-center"
           title="Zoom out"
         >
           -
         </button>
         <button
           onClick={fitToView}
-          className="w-7 h-7 bg-gray-800/90 border border-gray-700 rounded text-gray-300 hover:bg-gray-700 flex items-center justify-center"
+          className="w-10 h-10 bg-gray-800/90 border border-gray-700 rounded text-gray-300 hover:bg-gray-700 flex items-center justify-center"
           title="Fit to view"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -167,7 +233,7 @@ function SvgViewer({ svg }: { svg: string }) {
         </button>
         <button
           onClick={resetZoom}
-          className="w-7 h-7 bg-gray-800/90 border border-gray-700 rounded text-gray-400 hover:bg-gray-700 text-[9px] font-bold flex items-center justify-center"
+          className="w-10 h-10 bg-gray-800/90 border border-gray-700 rounded text-gray-400 hover:bg-gray-700 text-[9px] font-bold flex items-center justify-center"
           title="Reset to 1:1"
         >
           1:1

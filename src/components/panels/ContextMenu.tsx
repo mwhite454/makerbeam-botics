@@ -10,15 +10,20 @@ interface ContextMenuProps {
 export function ContextMenu({ x, y, onGroupNodes, onClose }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Dismiss on click outside
+  // Dismiss on click or tap outside
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      const target = e instanceof TouchEvent ? e.touches[0]?.target : e.target
+      if (menuRef.current && target && !menuRef.current.contains(target as Node)) {
         onClose()
       }
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('mousedown', handler as EventListener)
+    document.addEventListener('touchstart', handler as EventListener)
+    return () => {
+      document.removeEventListener('mousedown', handler as EventListener)
+      document.removeEventListener('touchstart', handler as EventListener)
+    }
   }, [onClose])
 
   // Dismiss on Escape

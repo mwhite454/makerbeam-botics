@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useMemo } from "react";
+import { useCallback, useRef, useState, useMemo, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -133,14 +133,43 @@ export function EditorPanel() {
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    // If already shown via long-press (iPadOS 16+ fires contextmenu after long-press too)
+    if (contextMenu) return;
     const selected = useEditorStore.getState().nodes.filter((n) => n.selected);
     if (selected.length < 2) return;
     setContextMenu({ x: e.clientX, y: e.clientY });
+  }, [contextMenu]);
+
+  // Long-press on the canvas shows the context menu on touch devices
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onCanvasTouchStart = useCallback((e: React.TouchEvent) => {
+    const selected = useEditorStore.getState().nodes.filter((n) => n.selected);
+    if (selected.length < 2) return;
+    const touch = e.touches[0];
+    longPressTimer.current = setTimeout(() => {
+      setContextMenu({ x: touch.clientX, y: touch.clientY });
+    }, 500);
   }, []);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  // Clean up timer on unmount
+  useEffect(() => cancelLongPress, [cancelLongPress]);
 
   return (
     <HaltDimmedContext.Provider value={dimmedNodeIds}>
-      <div className="flex-1 relative bg-gray-950">
+      <div
+        className="flex-1 relative bg-gray-950"
+        onTouchStart={onCanvasTouchStart}
+        onTouchMove={cancelLongPress}
+        onTouchEnd={cancelLongPress}
+      >
         <SearchBar
           nodes={nodes}
           updateNodeData={

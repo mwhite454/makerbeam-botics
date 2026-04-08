@@ -109,6 +109,21 @@
   letter-spacing: 0.1em;
 }
 
+/* ─── Touch ergonomics ────────────────────────────────────────────────────── */
+
+/* Remove the blue/grey tap highlight on iOS/Android */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Widen the panel separators slightly so they are easy to grab on touch */
+[data-separator].separator-h {
+  width: 10px;
+}
+[data-separator].separator-v {
+  height: 10px;
+}
+
 /* ─── Sketch SVG preview ──────────────────────────────────────────────────── */
 .sketch-svg-container svg {
   max-width: 100%;

@@ -8,6 +8,7 @@ import {
   type SketchPaletteItem,
 } from '@/types/sketchNodes'
 import { NodeTooltipPopover } from '@/components/toolbar/NodeTooltipPopover'
+import { useTouchNodeDrop } from '@/hooks/useTouchNodeDrop'
 
 const SKETCH_CATEGORY_ORDER: SketchNodeCategory[] = [
   'sketch_primitive',
@@ -20,6 +21,7 @@ const SKETCH_CATEGORY_ORDER: SketchNodeCategory[] = [
 export function SketchNodePalette() {
   const [tooltip, setTooltip] = useState<{ item: SketchPaletteItem; rect: DOMRect } | null>(null)
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { handleTouchStart } = useTouchNodeDrop()
 
   const handleMouseEnter = useCallback((e: React.MouseEvent, item: SketchPaletteItem) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -65,6 +67,9 @@ export function SketchNodePalette() {
                   onDragStart={(e) => onDragStart(e, item.type)}
                   onMouseEnter={(e) => handleMouseEnter(e, item)}
                   onMouseLeave={handleMouseLeave}
+                  onTouchStart={(e) =>
+                    handleTouchStart(e, item.type, item.defaultData as unknown as Record<string, unknown>, item.label)
+                  }
                   className={`
                     cursor-grab active:cursor-grabbing
                     ${SKETCH_CATEGORY_COLORS[item.category]} ${SKETCH_CATEGORY_TEXT[item.category]}
