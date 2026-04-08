@@ -68,7 +68,7 @@ export function SketchNodePalette() {
                   onMouseEnter={(e) => handleMouseEnter(e, item)}
                   onMouseLeave={handleMouseLeave}
                   onTouchStart={(e) =>
-                    handleTouchStart(e, item.type, item.defaultData as Record<string, unknown>, item.label)
+                    handleTouchStart(e, item.type, item.defaultData as unknown as Record<string, unknown>, item.label)
                   }
                   className={`
                     cursor-grab active:cursor-grabbing
