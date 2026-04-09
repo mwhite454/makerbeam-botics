@@ -14,11 +14,13 @@ interface PreferencesState {
   autoSaveIntervalMs: AutoSaveInterval;
   lastViewport: StoredViewport;
   stripHaltsOnExport: boolean;
+  longClickThresholdMs: number;
 
   setAutoSaveEnabled: (v: boolean) => void;
   setAutoSaveIntervalMs: (ms: AutoSaveInterval) => void;
   setLastViewport: (vp: StoredViewport) => void;
   setStripHaltsOnExport: (v: boolean) => void;
+  setLongClickThresholdMs: (ms: number) => void;
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -28,11 +30,13 @@ export const usePreferencesStore = create<PreferencesState>()(
       autoSaveIntervalMs: 30_000,
       lastViewport: { x: 0, y: 0, zoom: 1 },
       stripHaltsOnExport: false,
+      longClickThresholdMs: 1000,
 
       setAutoSaveEnabled: (v) => set({ autoSaveEnabled: v }),
       setAutoSaveIntervalMs: (ms) => set({ autoSaveIntervalMs: ms }),
       setLastViewport: (vp) => set({ lastViewport: vp }),
       setStripHaltsOnExport: (v) => set({ stripHaltsOnExport: v }),
+      setLongClickThresholdMs: (ms) => set({ longClickThresholdMs: ms }),
     }),
     {
       name: "makerbeam-preferences",

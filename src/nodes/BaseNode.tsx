@@ -10,7 +10,10 @@ import { Handle, Position, useReactFlow, useEdges } from "@xyflow/react";
 import { CATEGORY_COLORS, CATEGORY_TEXT } from "@/types/nodes";
 import { NodeMetaFields } from "@/components/NodeMetaFields";
 import { useEditorStore } from "@/store/editorStore";
+import { usePreferencesStore } from "@/store/preferencesStore";
 import { HaltDimmedContext } from "@/contexts/HaltDimmedContext";
+import { useScopeVariables } from "@/utils/scopeResolver";
+import { evaluateExpression } from "@/utils/evaluateExpression";
 
 interface HandleConfig {
   id: string;
@@ -310,7 +313,7 @@ export function NumberInput({
   );
 }
 
-// ─── Dual-phase expression input ─────────────────────────────────────────────
+// ─── Universal Expression Builder (F-001) ────────────────────────────────────
 
 interface ExpressionInputProps {
   label: string;
@@ -321,6 +324,10 @@ interface ExpressionInputProps {
   handleId?: string;
   min?: number;
   max?: number;
+  /** When true, always start in formula mode and hide the number toggle (e.g. for IF conditions). */
+  forceFormula?: boolean;
+  /** Input width class override */
+  widthClass?: string;
 }
 
 export function ExpressionInput({
@@ -332,16 +339,26 @@ export function ExpressionInput({
   handleId,
   min,
   max,
+  forceFormula,
+  widthClass = "w-[64px]",
 }: ExpressionInputProps) {
-  const globalParameters = useEditorStore((s) => s.globalParameters);
+  const scopeVars = useScopeVariables();
+  const longClickThreshold = usePreferencesStore((s) => s.longClickThresholdMs);
 
   const [localStr, setLocalStr] = useState(String(value));
-  const [formulaMode, setFormulaMode] = useState(() => isExpr(value));
+  const [formulaMode, setFormulaMode] = useState(
+    () => !!forceFormula || isExpr(value),
+  );
   const [isFocused, setIsFocused] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [previewValue, setPreviewValue] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevConnected = useRef(false);
+  const longClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongClick = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync external changes (e.g., edge auto-fill) to local display — skip while the field is focused
   useEffect(() => {
@@ -362,13 +379,28 @@ export function ExpressionInput({
     prevConnected.current = connected;
   }, [connected, varName]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Live preview evaluation (debounced)
+  useEffect(() => {
+    if (!formulaMode || !isFocused) {
+      setPreviewValue(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const result = evaluateExpression(localStr, scopeVars);
+      setPreviewValue(result);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [localStr, formulaMode, isFocused, scopeVars]);
+
   const flush = () => onChange(parseExprChange(localStr));
 
+  // Scope-aware suggestions: global params + loop vars + module args
   const suggestions = useMemo(() => {
-    if (!localStr.trim()) return globalParameters;
+    if (scopeVars.length === 0) return [];
+    if (!localStr.trim()) return scopeVars;
     const lower = localStr.toLowerCase();
-    return globalParameters.filter((p) => p.name.toLowerCase().includes(lower));
-  }, [localStr, globalParameters]);
+    return scopeVars.filter((v) => v.name.toLowerCase().includes(lower));
+  }, [localStr, scopeVars]);
 
   const applySuggestion = (name: string) => {
     setLocalStr(name);
@@ -380,17 +412,38 @@ export function ExpressionInput({
   const handleFocus = () => {
     setIsFocused(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    if (formulaMode && globalParameters.length > 0) setOpen(true);
+    if (formulaMode && scopeVars.length > 0) setOpen(true);
   };
 
   const handleBlur = () => {
     setIsFocused(false);
     flush();
     hideTimer.current = setTimeout(() => setOpen(false), 150);
+    setShowPreview(false);
   };
 
+  // Long-click detection: mouseDown starts a timer; if released before threshold => select all
+  const handleMouseDown = useCallback(() => {
+    isLongClick.current = false;
+    longClickTimer.current = setTimeout(() => {
+      isLongClick.current = true;
+    }, longClickThreshold);
+  }, [longClickThreshold]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
+    if (longClickTimer.current) {
+      clearTimeout(longClickTimer.current);
+      longClickTimer.current = null;
+    }
+    if (!isLongClick.current) {
+      // Short click: select all
+      e.currentTarget.select();
+    }
+    // Long click: browser default cursor positioning applies
+  }, []);
+
   const handleFormulaKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.ctrlKey && e.key === "m") {
+    if (e.ctrlKey && e.key === "m" && !forceFormula) {
       e.preventDefault();
       toggleFormula();
       return;
@@ -407,6 +460,13 @@ export function ExpressionInput({
       }
       return;
     }
+    if (e.key === "Tab") {
+      if (open && activeIdx >= 0) {
+        e.preventDefault();
+        applySuggestion(suggestions[activeIdx].name);
+        return;
+      }
+    }
     if (!open || suggestions.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -420,6 +480,7 @@ export function ExpressionInput({
   };
 
   const toggleFormula = () => {
+    if (forceFormula) return;
     if (formulaMode) {
       const n = parseExprChange(localStr);
       setLocalStr(String(n));
@@ -430,37 +491,53 @@ export function ExpressionInput({
     }
   };
 
+  const kindIcon = (kind: string) => {
+    switch (kind) {
+      case "global":
+        return "G";
+      case "loop":
+        return "L";
+      case "module_arg":
+        return "A";
+      default:
+        return "";
+    }
+  };
+
   return (
     <label className="flex items-center justify-between gap-2 text-xs text-gray-300 py-0.5 relative">
       <span className="shrink-0 text-gray-400 min-w-[50px]">{label}</span>
       <div className="flex items-center gap-1">
         {/* Formula/number mode toggle */}
-        <button
-          className={`text-[9px] w-4 h-4 rounded flex items-center justify-center transition-colors nodrag nopan font-mono leading-none
-            ${
+        {!forceFormula && (
+          <button
+            className={`text-[9px] w-4 h-4 rounded flex items-center justify-center transition-colors nodrag nopan font-mono leading-none
+              ${
+                formulaMode
+                  ? "bg-amber-700/40 text-amber-300 hover:bg-amber-700/60"
+                  : "bg-gray-700 text-gray-500 hover:text-amber-300 hover:bg-gray-600"
+              }`}
+            onClick={(e) => {
+              e.preventDefault();
+              toggleFormula();
+            }}
+            title={
               formulaMode
-                ? "bg-amber-700/40 text-amber-300 hover:bg-amber-700/60"
-                : "bg-gray-700 text-gray-500 hover:text-amber-300 hover:bg-gray-600"
-            }`}
-          onClick={(e) => {
-            e.preventDefault();
-            toggleFormula();
-          }}
-          title={
-            formulaMode
-              ? "Switch to number mode"
-              : "Switch to formula/expression mode"
-          }
-          tabIndex={-1}
-        >
-          {formulaMode ? "×" : "ƒ"}
-        </button>
+                ? "Switch to number mode (Ctrl+M)"
+                : "Switch to formula/expression mode (Ctrl+M)"
+            }
+            tabIndex={-1}
+          >
+            {formulaMode ? "×" : "ƒ"}
+          </button>
+        )}
 
         <div className="relative">
           {formulaMode ? (
             <input
+              ref={inputRef}
               type="text"
-              className={`w-[64px] bg-gray-800 rounded px-1.5 py-1 text-xs text-amber-200 focus:outline-none nodrag ${
+              className={`${widthClass} bg-gray-800 rounded px-1.5 py-1 text-xs font-mono text-amber-200 focus:outline-none nodrag ${
                 connected
                   ? "border border-gray-700 border-l-2 border-l-blue-400 focus:border-l-blue-300"
                   : "border border-amber-500/60 focus:border-amber-400"
@@ -474,12 +551,14 @@ export function ExpressionInput({
               }}
               onFocus={handleFocus}
               onBlur={handleBlur}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
               onKeyDown={handleFormulaKeyDown}
             />
           ) : (
             <input
               type="number"
-              className="w-[64px] bg-gray-800 border border-gray-700 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:border-blue-500 nodrag"
+              className={`${widthClass} bg-gray-800 border border-gray-700 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:border-blue-500 nodrag`}
               value={localStr}
               min={min}
               max={max}
@@ -510,11 +589,19 @@ export function ExpressionInput({
             />
           )}
 
+          {/* Value preview badge */}
+          {formulaMode && isFocused && previewValue !== null && (
+            <div className="absolute right-0 -top-5 z-50 bg-gray-700 border border-gray-600 rounded px-1.5 py-0.5 text-[10px] font-mono text-green-300 whitespace-nowrap pointer-events-none shadow-lg">
+              = {previewValue}
+            </div>
+          )}
+
+          {/* Autosuggest dropdown — scope-aware */}
           {formulaMode && open && suggestions.length > 0 && (
-            <div className="absolute left-0 top-full mt-0.5 z-50 bg-gray-800 border border-gray-600 rounded shadow-xl min-w-[120px] max-h-40 overflow-y-auto nodrag nopan">
-              {suggestions.map((p, i) => (
+            <div className="absolute left-0 top-full mt-0.5 z-50 bg-gray-800 border border-gray-600 rounded shadow-xl min-w-[140px] max-h-40 overflow-y-auto nodrag nopan">
+              {suggestions.map((sv, i) => (
                 <div
-                  key={p.id}
+                  key={`${sv.kind}-${sv.name}`}
                   className={`px-2 py-1 text-[11px] cursor-pointer font-mono flex items-center justify-between gap-2 ${
                     i === activeIdx
                       ? "bg-blue-600 text-white"
@@ -522,14 +609,28 @@ export function ExpressionInput({
                   }`}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    applySuggestion(p.name);
+                    applySuggestion(sv.name);
                   }}
+                  title={
+                    sv.currentValue !== undefined
+                      ? `Current value: ${sv.currentValue}`
+                      : undefined
+                  }
                 >
-                  <span>{p.name}</span>
+                  <span className="flex items-center gap-1">
+                    <span
+                      className={`text-[8px] w-3 text-center ${
+                        i === activeIdx ? "text-blue-200" : "text-gray-500"
+                      }`}
+                    >
+                      {kindIcon(sv.kind)}
+                    </span>
+                    <span>{sv.name}</span>
+                  </span>
                   <span
                     className={`text-[9px] ${i === activeIdx ? "text-blue-200" : "text-gray-500"}`}
                   >
-                    {p.dataType}
+                    {sv.dataType}
                   </span>
                 </div>
               ))}

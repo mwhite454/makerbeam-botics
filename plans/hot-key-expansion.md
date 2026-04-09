@@ -1,0 +1,5 @@
+1. When a Node is selected, hitting SHIFT + RIGHT ARROW moves one node Downstream (towards rendering).
+2. When a Node is selected, hitting SHIFT + LEFT ARROW moves one node UPSTREAM (towards first node).
+3. When a user is at either terminus of a stream, typing SHIFT + ARROW will move them to the opposite end of the stream. EXAMPLE user has 4 nodes: CUBE -> ROTATE -> TRANSLATE -> SCALE. SCALE is selected, and user hits SHIFT + RIGHT ARROW, they will auto traverse BACK to CUBE. If the user has CUBE selected and hits SHIFT + LEFT ARROW they will auto traverse to SCALE.
+4. SHIFT + TAB -> jumps user to the output EDGE of the selected node. 
+5. IF output EDGE of a node is selected and a user hits SPACE a filterable/selectable drop down will appear with new node options to add (same nodes as in pallette for now)
