@@ -1,5 +1,5 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, TextInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchExpressionData } from '@/types/sketchNodes'
 import { useEditorStore } from '@/store/editorStore'
 
@@ -36,7 +36,13 @@ export function SketchExpressionNode({ id, data, selected }: NodeProps) {
         </select>
       </label>
 
-      <TextInput label="math" value={expression} onChange={(v) => update(id, { expression: v })} />
+      <ExpressionInput
+        label="math"
+        value={expression}
+        forceFormula
+        widthClass="w-[180px]"
+        onChange={(v) => update(id, { expression: String(v) })}
+      />
 
       <div className="text-[10px] text-gray-500 leading-snug">
         Use {'{param}'} in math. Preview: <span className="text-amber-300 font-mono">{preview}</span>

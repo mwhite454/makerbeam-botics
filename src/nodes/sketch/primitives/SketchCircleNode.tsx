@@ -1,5 +1,5 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, ExpressionInput, NumberInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchCircleData } from '@/types/sketchNodes'
 import { useEditorStore } from '@/store/editorStore'
 
@@ -16,7 +16,18 @@ export function SketchCircleNode({ id, data, selected }: NodeProps) {
       inputHandles={[{ id: 'in-0', label: 'r' }, { id: 'in-1', label: 'seg' }]}
     >
       <ExpressionInput label="radius" value={d.radius} step={1} min={0} nodeId={id} handleId="in-0" onChange={(v) => update(id, { radius: v })} />
-      <NumberInput label="segments" value={d.segments} step={1} min={0} onChange={(v) => update(id, { segments: v })} />
+      <ExpressionInput
+        label="segments"
+        value={d.segments}
+        step={1}
+        min={0}
+        nodeId={id}
+        handleId="in-1"
+        onChange={(v) => {
+          const n = typeof v === 'number' ? v : Number(v) || 0
+          update(id, { segments: Math.max(0, Math.round(n)) })
+        }}
+      />
     </SketchBaseNode>
   )
 }

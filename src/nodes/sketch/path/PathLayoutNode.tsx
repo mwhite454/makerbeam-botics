@@ -1,5 +1,5 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, NumberInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput } from '../SketchBaseNode'
 import type { SketchPathLayoutData } from '@/types/sketchNodes'
 import { useEditorStore } from '@/store/editorStore'
 
@@ -24,9 +24,21 @@ export function PathLayoutNode({ id, data, selected }: NodeProps) {
       </div>
 
       {d.mode === 'count' ? (
-        <NumberInput label="count" value={d.count} step={1} min={1} onChange={(v) => update(id, { count: v })} />
+        <ExpressionInput
+          label="count"
+          value={d.count}
+          step={1}
+          min={1}
+          onChange={(v) => update(id, { count: typeof v === 'number' ? v : Number(v) || 0 })}
+        />
       ) : (
-        <NumberInput label="distance" value={d.distance} step={0.5} min={0} onChange={(v) => update(id, { distance: v })} />
+        <ExpressionInput
+          label="distance"
+          value={d.distance}
+          step={0.5}
+          min={0}
+          onChange={(v) => update(id, { distance: typeof v === 'number' ? v : Number(v) || 0 })}
+        />
       )}
 
       <div className="mt-2">
@@ -38,7 +50,13 @@ export function PathLayoutNode({ id, data, selected }: NodeProps) {
         </select>
       </div>
 
-      <NumberInput label="offset" value={d.offset} step={0.5} min={-1000} onChange={(v) => update(id, { offset: v })} />
+      <ExpressionInput
+        label="offset"
+        value={d.offset}
+        step={0.5}
+        min={-1000}
+        onChange={(v) => update(id, { offset: typeof v === 'number' ? v : Number(v) || 0 })}
+      />
     </SketchBaseNode>
   )
 }

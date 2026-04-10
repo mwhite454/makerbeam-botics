@@ -92,6 +92,12 @@ function emitNode(
   tabs?: EditorTab[],
   globalParameters?: GlobalParameter[],
   importedFiles?: Record<string, string>,
+  // Optional geometry-string producer that transform leaves (transforms with
+  // no wired `in-0` child) should use as their body. Used by the IF node to
+  // inject upstream geometry into YES/NO transform-chain branches. Parameter
+  // is the desired indent level, so each leaf can re-render at the right
+  // depth.
+  geometryOverride?: (atIndent: number) => string,
 ): string {
   if (visiting.has(nodeId))
     return indentStr(indent) + "// ERROR: cycle detected\n";
@@ -113,7 +119,10 @@ function emitNode(
   const children = childrenOf.get(nodeId) ?? [];
   const pad = indentStr(indent);
 
-  function getChild(index: number): string {
+  function getChild(
+    index: number,
+    override?: (atIndent: number) => string,
+  ): string {
     const child = children.find((c) => c.handleIndex === index);
     if (!child) return ""; // no child connected — will be handled by caller
     return emitNode(
@@ -126,6 +135,7 @@ function emitNode(
       tabs,
       globalParameters,
       importedFiles,
+      override,
     );
   }
 
@@ -209,12 +219,20 @@ function emitNode(
     }
   }
 
-  // For transform nodes: if no child, just emit a comment
+  // For transform nodes: if no child, just emit a comment — unless a
+  // geometryOverride was provided (e.g. IF-branch injection), in which case
+  // the transform wraps the override geometry. If a child IS connected, we
+  // still forward the override so nested transform chains can insert the
+  // geometry at the deepest leaf of the chain.
   function emitTransform(header: string): string {
     if (!hasChild(0)) {
+      if (geometryOverride != null) {
+        const inner = geometryOverride(indent + 2);
+        return `${pad}${header} {\n${inner}${pad}}\n`;
+      }
       return `${pad}// ${node!.type}: no child connected\n`;
     }
-    return `${pad}${header}\n${getChild(0)}`;
+    return `${pad}${header}\n${getChild(0, geometryOverride)}`;
   }
 
   let result: string;
@@ -468,14 +486,79 @@ function emitNode(
 
     case "if_cond": {
       const condition = d.condition || "true";
-      const hasThen = hasChild(0);
-      const hasElse = hasChild(1);
-      if (!hasThen && !hasElse) {
-        result = `${pad}// if: no child connected\n`;
+      // New handle layout:
+      //   in-0 = upstream geometry (the subtree each branch operates on)
+      //   in-1 = YES (transform chain applied when condition is true)
+      //   in-2 = NO  (transform chain applied when condition is false)
+      const hasGeom = hasChild(0);
+      const hasYes = hasChild(1);
+      const hasNo = hasChild(2);
+      const geomRef = getChildRef(0);
+
+      // Build a geometry-override closure that re-renders the upstream
+      // subtree at any requested indent. Uses a fresh `visited` set per
+      // invocation so the same subtree can appear inside BOTH branches
+      // without being deduped to a `// (shared ref)` comment.
+      const upstreamOverride:
+        | ((atIndent: number) => string)
+        | undefined = geomRef
+        ? (atIndent: number) =>
+            emitNode(
+              geomRef.nodeId,
+              nodesMap,
+              childrenOf,
+              new Set(),
+              new Set(),
+              atIndent,
+              tabs,
+              globalParameters,
+              importedFiles,
+            )
+        : undefined;
+
+      if (!hasYes && !hasNo) {
+        if (hasGeom && upstreamOverride) {
+          // IF with only upstream geometry is effectively a no-op wrap.
+          result = `${pad}if (${condition}) {\n${upstreamOverride(indent + 2)}${pad}}\n`;
+        } else {
+          result = `${pad}// if: no child connected\n`;
+        }
+      } else if (upstreamOverride) {
+        // Both branches (when present) wrap the upstream geometry via their
+        // transform chains. If a branch is unwired, that branch reduces to
+        // the bare upstream geometry. Each branch is rendered with a fresh
+        // `visited` set so that the upstream geometry can legally appear
+        // inside BOTH branches (and inside the IF's own `in-0` slot) without
+        // being replaced by a `// (shared ref)` comment.
+        const emitBranch = (handleIdx: number): string => {
+          const ref = children.find((c) => c.handleIndex === handleIdx);
+          if (!ref) return upstreamOverride(indent + 2);
+          return emitNode(
+            ref.nodeId,
+            nodesMap,
+            childrenOf,
+            new Set(),
+            new Set(),
+            indent + 2,
+            tabs,
+            globalParameters,
+            importedFiles,
+            upstreamOverride,
+          );
+        };
+        const yesBody = emitBranch(1);
+        const noBody = emitBranch(2);
+        result = `${pad}if (${condition}) {\n${yesBody}${pad}} else {\n${noBody}${pad}}\n`;
       } else {
-        result = `${pad}if (${condition}) {\n${getChild(0)}${pad}}`;
-        if (hasElse) {
-          result += ` else {\n${getChild(1)}${pad}}`;
+        // Legacy/fallback path: no upstream geometry wired. Emit branches
+        // standalone (backward-compatible with the previous two-handle
+        // layout where in-1/in-2 were the then/else bodies).
+        result = `${pad}// if: no upstream geometry — branches emit standalone\n`;
+        result += `${pad}if (${condition}) {\n`;
+        if (hasYes) result += getChild(1);
+        result += `${pad}}`;
+        if (hasNo) {
+          result += ` else {\n${getChild(2)}${pad}}`;
         }
         result += "\n";
       }
