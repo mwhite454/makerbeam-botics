@@ -23,8 +23,11 @@ export function SketchNgonNode({ id, data, selected }: NodeProps) {
         nodeId={id}
         handleId="in-0"
         onChange={(v) => {
-          const n = typeof v === 'number' ? v : Number(v) || 3
-          update(id, { sides: Math.max(3, Math.round(n)) })
+          if (typeof v === 'number') {
+            update(id, { sides: Math.max(3, Math.round(v)) })
+            return
+          }
+          update(id, { sides: v })
         }}
       />
       <ExpressionInput label="radius" value={d.radius} step={1} min={0} nodeId={id} handleId="in-1" onChange={(v) => update(id, { radius: v })} />
