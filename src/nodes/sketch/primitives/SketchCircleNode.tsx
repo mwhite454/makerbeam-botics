@@ -24,8 +24,12 @@ export function SketchCircleNode({ id, data, selected }: NodeProps) {
         nodeId={id}
         handleId="in-1"
         onChange={(v) => {
-          const n = typeof v === 'number' ? v : Number(v) || 0
-          update(id, { segments: Math.max(0, Math.round(n)) })
+          if (typeof v === 'number') {
+            update(id, { segments: Math.max(0, Math.round(v)) })
+            return
+          }
+
+          update(id, { segments: v })
         }}
       />
     </SketchBaseNode>
