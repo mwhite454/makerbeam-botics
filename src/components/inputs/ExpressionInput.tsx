@@ -128,7 +128,14 @@ export function ExpressionInput({
   const prevConnected = useRef(false);
   const longClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongClick = useRef(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      if (longClickTimer.current) clearTimeout(longClickTimer.current);
+    };
+  }, []);
 
   // Sync external changes (e.g., edge auto-fill) to local display — skip while focused
   useEffect(() => {
@@ -305,7 +312,7 @@ export function ExpressionInput({
         <div className="relative">
           {formulaMode ? (
             <input
-              ref={inputRef}
+
               type="text"
               className={`${widthClass} bg-gray-800 rounded px-1.5 py-1 text-xs font-mono text-amber-200 focus:outline-none nodrag ${
                 connected

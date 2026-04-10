@@ -13,9 +13,9 @@ export function IfCondNode({ id, data, selected }: NodeProps) {
       label="if"
       selected={selected}
       inputHandles={[
-        { id: "in-0", label: "geometry" },
-        { id: "in-1", label: "YES" },
-        { id: "in-2", label: "NO" },
+        { id: "in-0", label: "YES" },
+        { id: "in-1", label: "NO" },
+        { id: "in-2", label: "geometry" },
       ]}
     >
       <ExpressionInput

@@ -95,30 +95,42 @@ export function ColorNode({ id, data, selected }: NodeProps) {
         )}
       </div>
 
-      <ExpressionInput
-        label="R"
-        value={parseFloat(d.r.toFixed(3))}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(v) => setRgb(typeof v === 'number' ? v : Number(v) || 0, d.g, d.b)}
-      />
-      <ExpressionInput
-        label="G"
-        value={parseFloat(d.g.toFixed(3))}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(v) => setRgb(d.r, typeof v === 'number' ? v : Number(v) || 0, d.b)}
-      />
-      <ExpressionInput
-        label="B"
-        value={parseFloat(d.b.toFixed(3))}
-        min={0}
-        max={1}
-        step={0.05}
-        onChange={(v) => setRgb(d.r, d.g, typeof v === 'number' ? v : Number(v) || 0)}
-      />
+      <label className="flex items-center justify-between gap-2 text-sm text-gray-300">
+        <span>R</span>
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(d.r.toFixed(3))}
+          onChange={(e) => setRgb(clampUnit(e.target.valueAsNumber), d.g, d.b)}
+          className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-right text-gray-100 nodrag"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 text-sm text-gray-300">
+        <span>G</span>
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(d.g.toFixed(3))}
+          onChange={(e) => setRgb(d.r, clampUnit(e.target.valueAsNumber), d.b)}
+          className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-right text-gray-100 nodrag"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 text-sm text-gray-300">
+        <span>B</span>
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(d.b.toFixed(3))}
+          onChange={(e) => setRgb(d.r, d.g, clampUnit(e.target.valueAsNumber))}
+          className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-right text-gray-100 nodrag"
+        />
+      </label>
       <ExpressionInput
         label="A"
         value={typeof d.alpha === 'number' ? parseFloat(d.alpha.toFixed(3)) : d.alpha}

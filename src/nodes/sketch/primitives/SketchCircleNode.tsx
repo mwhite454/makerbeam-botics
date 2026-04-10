@@ -28,7 +28,6 @@ export function SketchCircleNode({ id, data, selected }: NodeProps) {
             update(id, { segments: Math.max(0, Math.round(v)) })
             return
           }
-
           update(id, { segments: v })
         }}
       />

@@ -29,7 +29,7 @@ export function PathLayoutNode({ id, data, selected }: NodeProps) {
           value={d.count}
           step={1}
           min={1}
-          onChange={(v) => update(id, { count: typeof v === 'number' ? v : Number(v) || 0 })}
+          onChange={(v) => update(id, { count: v })}
         />
       ) : (
         <ExpressionInput
@@ -37,7 +37,7 @@ export function PathLayoutNode({ id, data, selected }: NodeProps) {
           value={d.distance}
           step={0.5}
           min={0}
-          onChange={(v) => update(id, { distance: typeof v === 'number' ? v : Number(v) || 0 })}
+          onChange={(v) => update(id, { distance: v })}
         />
       )}
 
@@ -55,7 +55,7 @@ export function PathLayoutNode({ id, data, selected }: NodeProps) {
         value={d.offset}
         step={0.5}
         min={-1000}
-        onChange={(v) => update(id, { offset: typeof v === 'number' ? v : Number(v) || 0 })}
+        onChange={(v) => update(id, { offset: v })}
       />
     </SketchBaseNode>
   )

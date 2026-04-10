@@ -13,7 +13,7 @@ export function MakerBeamNode({ id, data, selected }: NodeProps) {
         value={d.length}
         step={10}
         min={1}
-        onChange={(v) => update(id, { length: typeof v === 'number' ? v : Number(v) || 0 })}
+        onChange={(v) => update(id, { length: v })}
       />
       <div className="text-[9px] text-yellow-600 mt-1">MakerBeamXL 15×15mm</div>
     </BaseNode>
