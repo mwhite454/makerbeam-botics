@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useEditorStore } from '@/store/editorStore'
 import { parseOFF } from '@/utils/parseOFF'
+import { LoopPreviewControls } from './LoopPreviewControls'
+import { ModulePreviewArgs } from './ModulePreviewArgs'
 
 // ─── Shared Three.js scene setup ─────────────────────────────────────────────
 
@@ -271,6 +273,17 @@ export function PreviewPanel() {
   const { renderStatus, renderError, renderLogs, renderResultSTL, renderResultPNG, renderResultOFF, previewMode, generatedCode } = useEditorStore()
   const hasColorHints = /\bcolor\s*\(/.test(generatedCode)
 
+  const tabs        = useEditorStore((s) => s.tabs)
+  const activeTabId = useEditorStore((s) => s.activeTabId)
+  const previewHasGeometry = useEditorStore((s) => s.previewHasGeometry)
+
+  const activeTabType = useMemo(() => {
+    return tabs.find((t) => t.id === activeTabId)?.tabType ?? 'main'
+  }, [tabs, activeTabId])
+
+  const isLoopTab   = activeTabType === 'loop'
+  const isModuleTab = activeTabType === 'module'
+
   return (
     <div className="h-full bg-gray-900 border-l border-white/10 flex flex-col">
       {/* Header */}
@@ -289,6 +302,10 @@ export function PreviewPanel() {
         </div>
       </div>
 
+      {/* F-002: Sub-editor controls */}
+      {isLoopTab   && <LoopPreviewControls />}
+      {isModuleTab && <ModulePreviewArgs />}
+
       {/* Content */}
       <div className="flex-1 relative overflow-hidden">
         {previewMode === 'stl' && hasColorHints && (
@@ -297,7 +314,21 @@ export function PreviewPanel() {
           </div>
         )}
 
-        {renderStatus === 'idle' && (
+        {/* F-002 R6: no renderable geometry in the current scope */}
+        {!previewHasGeometry && renderStatus !== 'rendering' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 text-center px-6 z-10 bg-gray-900">
+            <div className="text-4xl mb-3 opacity-20">∅</div>
+            <p className="text-xs text-gray-500">No renderable geometry in this scope.</p>
+            {isLoopTab && (
+              <p className="text-[10px] text-gray-600 mt-1">Add geometry nodes to the loop body.</p>
+            )}
+            {isModuleTab && (
+              <p className="text-[10px] text-gray-600 mt-1">Add geometry nodes to the module body.</p>
+            )}
+          </div>
+        )}
+
+        {renderStatus === 'idle' && previewHasGeometry && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 text-center px-6">
             <div className="text-5xl mb-4 opacity-30">◈</div>
             <p className="text-xs text-gray-500">Click <span className="text-white font-semibold">Render</span> or enable auto-render</p>

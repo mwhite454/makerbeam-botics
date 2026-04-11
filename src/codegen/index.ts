@@ -1115,3 +1115,262 @@ export function generateLoopBodyCode(
 
   return `${signature} {\n${indented}}\n`;
 }
+
+// ─── F-002: Upstream geometry emitter ────────────────────────────────────────
+
+/**
+ * Emits OpenSCAD code for geometry flowing into a specific input handle of a
+ * node in a given tab's graph. Used by loop/module preview to synthesize the
+ * upstream geometry that the body module receives via children().
+ */
+export function emitUpstreamGeometry(
+  tabNodes: Node[],
+  tabEdges: Edge[],
+  targetNodeId: string,
+  targetHandleIndex: number,
+  globalParameters?: GlobalParameter[],
+  tabs?: EditorTab[],
+  importedFiles?: Record<string, string>,
+): string {
+  const codeNodes = tabNodes.filter((n) => n.type !== "group_node");
+  const nodesMap = new Map(codeNodes.map((n) => [n.id, n]));
+  const childrenOf = buildAdjacency(tabEdges);
+
+  const childRefs = childrenOf.get(targetNodeId) ?? [];
+  const ref = childRefs.find((c) => c.handleIndex === targetHandleIndex);
+  if (!ref) return "";
+
+  return emitNode(
+    ref.nodeId,
+    nodesMap,
+    childrenOf,
+    new Set(),
+    new Set(),
+    0,
+    tabs,
+    globalParameters,
+    importedFiles,
+  );
+}
+
+// ─── F-002: Loop preview code generation ─────────────────────────────────────
+
+/**
+ * Synthesizes a complete renderable OpenSCAD program for previewing a loop
+ * body tab. Produces: global params + body module definition + optional
+ * upstream geometry + invocation at the requested iteration or range.
+ */
+export function generateLoopPreviewCode(opts: {
+  bodyTabModuleName: string;
+  bodyTabNodes: Node[];
+  bodyTabEdges: Edge[];
+  parentTab?: EditorTab;
+  parentNodeId?: string;
+  hasGeometryInput: boolean;
+  previewMode: "single" | "range";
+  previewValue: number;
+  previewRange: { start: number; end: number; step: number } | null;
+  globalParameters?: GlobalParameter[];
+  tabs?: EditorTab[];
+  importedFiles?: Record<string, string>;
+}): string {
+  const {
+    bodyTabModuleName,
+    bodyTabNodes,
+    bodyTabEdges,
+    parentTab,
+    parentNodeId,
+    hasGeometryInput,
+    previewMode,
+    previewValue,
+    previewRange,
+    globalParameters,
+    tabs,
+    importedFiles,
+  } = opts;
+
+  let code = "";
+
+  if (globalParameters && globalParameters.length > 0) {
+    for (const p of globalParameters) {
+      code += emitGlobalParameter(p);
+    }
+    code += "\n";
+  }
+
+  if (tabs) {
+    for (const tab of tabs) {
+      if (tab.moduleName === bodyTabModuleName) continue;
+      if (tab.tabType === "module") {
+        const mc = generateModuleCode(tab.moduleName, tab.nodes, tab.edges);
+        if (mc.trim()) code += mc + "\n";
+      } else if (tab.tabType === "loop") {
+        const lc = generateLoopBodyCode(tab.moduleName, tab.nodes, tab.edges);
+        if (lc.trim()) code += lc + "\n";
+      }
+    }
+  }
+
+  const bodyDef = generateLoopBodyCode(bodyTabModuleName, bodyTabNodes, bodyTabEdges);
+  code += bodyDef + "\n";
+
+  const ctxNode = bodyTabNodes.find((n) => n.type === "loop_context");
+  const varName = ctxNode
+    ? sanitizeIdentifier(
+        String((ctxNode.data as Record<string, unknown>).varName || "i"),
+        "i",
+      )
+    : "i";
+  const safeModuleName = sanitizeIdentifier(bodyTabModuleName, "for_body");
+
+  const rangeStart = previewRange?.start ?? 0;
+  const rangeEnd = previewRange?.end ?? 5;
+  const rangeStep = previewRange?.step ?? 1;
+
+  let upstreamCode = "";
+  if (hasGeometryInput && parentTab && parentNodeId) {
+    upstreamCode = emitUpstreamGeometry(
+      parentTab.nodes,
+      parentTab.edges,
+      parentNodeId,
+      0,
+      globalParameters,
+      tabs,
+      importedFiles,
+    );
+  }
+
+  const hasUpstream = upstreamCode.trim().length > 0;
+
+  if (previewMode === "single") {
+    const iterVal = previewValue;
+    if (hasUpstream) {
+      const indentedUpstream = upstreamCode
+        .split("\n")
+        .map((l) => (l.trim() ? "  " + l : l))
+        .join("\n");
+      code += `${safeModuleName}(${iterVal}, ${rangeStart}, ${rangeEnd}, ${rangeStep}) {\n${indentedUpstream}}\n`;
+    } else {
+      code += `${safeModuleName}(${iterVal}, ${rangeStart}, ${rangeEnd}, ${rangeStep});\n`;
+    }
+  } else {
+    if (hasUpstream) {
+      const indentedUpstream = upstreamCode
+        .split("\n")
+        .map((l) => (l.trim() ? "    " + l : l))
+        .join("\n");
+      code +=
+        `for (${varName} = [${rangeStart} : ${rangeStep} : ${rangeEnd}])\n` +
+        `  ${safeModuleName}(${varName}, ${rangeStart}, ${rangeEnd}, ${rangeStep}) {\n` +
+        `${indentedUpstream}  }\n`;
+    } else {
+      code +=
+        `for (${varName} = [${rangeStart} : ${rangeStep} : ${rangeEnd}])\n` +
+        `  ${safeModuleName}(${varName}, ${rangeStart}, ${rangeEnd}, ${rangeStep});\n`;
+    }
+  }
+
+  return code;
+}
+
+// ─── F-002: Module preview code generation ───────────────────────────────────
+
+/**
+ * Synthesizes a complete renderable OpenSCAD program for previewing a module
+ * tab. Produces: global params + module definition + a call with user-provided
+ * argument overrides (falling back to module_arg defaults).
+ */
+export function generateModulePreviewCode(opts: {
+  moduleName: string;
+  moduleTabNodes: Node[];
+  moduleTabEdges: Edge[];
+  argOverrides: Record<string, string>;
+  globalParameters?: GlobalParameter[];
+  tabs?: EditorTab[];
+}): string {
+  const {
+    moduleName,
+    moduleTabNodes,
+    moduleTabEdges,
+    argOverrides,
+    globalParameters,
+    tabs,
+  } = opts;
+
+  let code = "";
+
+  if (globalParameters && globalParameters.length > 0) {
+    for (const p of globalParameters) {
+      code += emitGlobalParameter(p);
+    }
+    code += "\n";
+  }
+
+  if (tabs) {
+    for (const tab of tabs) {
+      if (tab.moduleName === moduleName) continue;
+      if (tab.tabType === "module") {
+        const mc = generateModuleCode(tab.moduleName, tab.nodes, tab.edges);
+        if (mc.trim()) code += mc + "\n";
+      } else if (tab.tabType === "loop") {
+        const lc = generateLoopBodyCode(tab.moduleName, tab.nodes, tab.edges);
+        if (lc.trim()) code += lc + "\n";
+      }
+    }
+  }
+
+  const moduleDef = generateModuleCode(moduleName, moduleTabNodes, moduleTabEdges);
+  code += moduleDef + "\n";
+
+  const safeModuleName = sanitizeIdentifier(moduleName, "module");
+  const argNodes = moduleTabNodes.filter((n) => n.type === "module_arg");
+  const argParts: string[] = [];
+
+  for (const n of argNodes) {
+    const d = n.data as Record<string, unknown>;
+    const rawName = String(d.argName || "");
+    if (!rawName) continue;
+    const name = sanitizeIdentifier(rawName, "arg");
+    const dataType = String(d.dataType || "number");
+    const overrideVal = argOverrides[rawName];
+    const defaultVal = String(d.defaultValue ?? "0");
+    const rawValue = overrideVal !== undefined ? overrideVal : defaultVal;
+
+    let formattedValue = rawValue;
+    if (dataType === "string") {
+      const isQuoted = /^\s*"[\s\S]*"\s*$/.test(rawValue);
+      formattedValue = isQuoted
+        ? rawValue
+        : `"${rawValue.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    } else if (dataType === "boolean") {
+      formattedValue = rawValue === "true" ? "true" : "false";
+    }
+
+    argParts.push(`${name} = ${formattedValue}`);
+  }
+
+  code += `${safeModuleName}(${argParts.join(", ")});\n`;
+  return code;
+}
+
+// ─── F-002: Empty geometry detection ─────────────────────────────────────────
+
+/**
+ * Returns true if the generated OpenSCAD code contains renderable geometry.
+ * Filters out echo(), comments, variable declarations, and module definitions.
+ */
+export function hasRenderableGeometry(code: string): boolean {
+  const stripped = code.replace(/\/\*[\s\S]*?\*\//g, "");
+  const lines = stripped.split("\n");
+
+  const nonGeometryPattern =
+    /^\s*($|\/\/|module\s|echo\s*\(|[a-zA-Z_][a-zA-Z0-9_]*\s*=|for\s*\(|\}|\{)/;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (nonGeometryPattern.test(trimmed)) continue;
+    return true;
+  }
+  return false;
+}
