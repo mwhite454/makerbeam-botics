@@ -67,7 +67,7 @@ export function GeometryGeneratorLoopNode({ id, data, selected }: NodeProps) {
       false,
       Date.now(),
     );
-    const newTabId = createLoopBodyTab(label, seedNodes as never);
+    const newTabId = createLoopBodyTab(label, seedNodes as never, undefined, callerTabId, id);
     updateNodeDataInTab(callerTabId, id, { bodyTabId: newTabId });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

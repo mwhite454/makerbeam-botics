@@ -46,6 +46,10 @@ export interface EditorTab {
   sketchName: string; // Sketch identifier (for sketch tabs)
   nodes: Node[];
   edges: Edge[];
+  /** ID of the tab that created this sub-editor tab (F-002 R1) */
+  parentTabId?: string;
+  /** ID of the node in the parent tab that owns this sub-editor (F-002 R1) */
+  parentNodeId?: string;
 }
 
 function createTab(
@@ -109,6 +113,8 @@ interface EditorState {
     label: string,
     seedNodes: Node[],
     seedEdges?: import("@xyflow/react").Edge[],
+    parentTabId?: string,
+    parentNodeId?: string,
   ) => string;
   addNode: (node: Node) => void;
 
@@ -152,6 +158,18 @@ interface EditorState {
   setShowParametersPanel: (v: boolean) => void;
   setPreviewMode: (m: PreviewMode) => void;
   setAutoRender: (v: boolean) => void;
+
+  // ── Sub-editor preview state (F-002) ────────────────────────────────────────
+  loopPreviewMode: 'single' | 'range';
+  loopPreviewValue: number;
+  loopPreviewRange: { start: number; end: number; step: number } | null;
+  modulePreviewArgs: Record<string, string>;
+  previewHasGeometry: boolean;
+  setLoopPreviewMode: (mode: 'single' | 'range') => void;
+  setLoopPreviewValue: (v: number) => void;
+  setLoopPreviewRange: (r: { start: number; end: number; step: number } | null) => void;
+  setModulePreviewArgs: (args: Record<string, string>) => void;
+  setPreviewHasGeometry: (v: boolean) => void;
 
   // ── Sketch state (for active sketch tab) ──────────────────────────────────
   sketchPreviewSvg: string;
@@ -209,7 +227,7 @@ export const useEditorStore = create<EditorState>()(
         return id;
       },
 
-      createLoopBodyTab: (label, seedNodes, seedEdges) => {
+      createLoopBodyTab: (label, seedNodes, seedEdges, parentTabId, parentNodeId) => {
         const id = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         set((state) => {
           // Save current tab's nodes/edges without switching away
@@ -221,6 +239,8 @@ export const useEditorStore = create<EditorState>()(
           const tab = createTab(id, label, "loop");
           tab.nodes = seedNodes as Node[];
           tab.edges = (seedEdges ?? []) as Edge[];
+          if (parentTabId) tab.parentTabId = parentTabId;
+          if (parentNodeId) tab.parentNodeId = parentNodeId;
           state.tabs.push(tab);
           // activeTabId stays unchanged — silent creation
         });
@@ -340,6 +360,67 @@ export const useEditorStore = create<EditorState>()(
               .map((n) => `${n.type}=${JSON.stringify(n.data)}`)
               .join(" | ");
             console.log(`[Botics] tab-load "${next.label}": ${snapshot}`);
+          }
+
+          // ── F-002: Initialize preview state when entering a loop/module tab ──
+          // Strict numeric parse: only accept purely numeric strings.
+          // Expression values (e.g. "i*2", "WIDTH/2") fall back to the default.
+          function strictNum(v: unknown, fallback: number): number {
+            const n = Number(String(v ?? '').trim());
+            return Number.isFinite(n) ? n : fallback;
+          }
+
+          // Clear stale state first
+          state.loopPreviewMode = 'single';
+          state.modulePreviewArgs = {};
+          state.previewHasGeometry = true;
+
+          if (next?.tabType === 'loop' && next.parentNodeId && next.parentTabId) {
+            // Find the parent for-loop node to read its range
+            const parentTab = state.tabs.find((t) => t.id === next.parentTabId);
+            const parentNodes = parentTab?.id === state.activeTabId
+              ? state.nodes
+              : parentTab?.nodes ?? [];
+            const parentNode = parentNodes.find((n) => n.id === next.parentNodeId);
+            if (parentNode) {
+              const d = parentNode.data as Record<string, unknown>;
+              const startVal = strictNum(d.start, 0);
+              const endVal   = strictNum(d.end,   5);
+              const stepVal  = strictNum(d.step,  1);
+              state.loopPreviewValue = startVal;
+              state.loopPreviewRange = { start: startVal, end: endVal, step: stepVal };
+            } else {
+              state.loopPreviewValue = 0;
+              state.loopPreviewRange = { start: 0, end: 5, step: 1 };
+            }
+          } else if (next?.tabType === 'loop') {
+            // Fallback: read from loop_context node in the body tab
+            const ctxNode = next.nodes.find((n) => n.type === 'loop_context');
+            if (ctxNode) {
+              const d = ctxNode.data as Record<string, unknown>;
+              const startVal = strictNum(d.start, 0);
+              const endVal   = strictNum(d.end,   5);
+              const stepVal  = strictNum(d.step,  1);
+              state.loopPreviewValue = startVal;
+              state.loopPreviewRange = { start: startVal, end: endVal, step: stepVal };
+            } else {
+              state.loopPreviewValue = 0;
+              state.loopPreviewRange = { start: 0, end: 5, step: 1 };
+            }
+          } else if (next?.tabType === 'module') {
+            // Initialize module arg overrides from module_arg nodes
+            const argNodes = next.nodes.filter((n) => n.type === 'module_arg');
+            const args: Record<string, string> = {};
+            for (const n of argNodes) {
+              const d = n.data as Record<string, unknown>;
+              const name = String(d.argName || '');
+              if (name) args[name] = String(d.defaultValue ?? '0');
+            }
+            state.modulePreviewArgs = args;
+            state.loopPreviewRange = null;
+          } else {
+            state.loopPreviewValue = 0;
+            state.loopPreviewRange = null;
           }
         }),
 
@@ -619,6 +700,24 @@ export const useEditorStore = create<EditorState>()(
           state.autoRender = v;
         }),
 
+      // ── Sub-editor preview state (F-002) ──────────────────────────────────────
+      loopPreviewMode: 'single',
+      loopPreviewValue: 0,
+      loopPreviewRange: null,
+      modulePreviewArgs: {},
+      previewHasGeometry: true,
+
+      setLoopPreviewMode: (mode) =>
+        set((state) => { state.loopPreviewMode = mode; }),
+      setLoopPreviewValue: (v) =>
+        set((state) => { state.loopPreviewValue = v; }),
+      setLoopPreviewRange: (r) =>
+        set((state) => { state.loopPreviewRange = r; }),
+      setModulePreviewArgs: (args) =>
+        set((state) => { state.modulePreviewArgs = args; }),
+      setPreviewHasGeometry: (v) =>
+        set((state) => { state.previewHasGeometry = v; }),
+
       // ── Sketch state ────────────────────────────────────────────────────────
       sketchPreviewSvg: "",
       setSketchPreviewSvg: (svg) =>
@@ -768,6 +867,26 @@ export const useEditorStore = create<EditorState>()(
             if (active) {
               state.nodes = active.nodes;
               state.edges = active.edges;
+            }
+
+            // ── F-002: Backfill parentTabId/parentNodeId for legacy saves ──────
+            // Scan all tabs for loop nodes that have bodyTabId references.
+            // For any loop tab that lacks parentTabId, set it from the owning node.
+            const loopNodeTypes = new Set([
+              'for_loop', 'geo_editor_loop', 'geo_generator_loop', 'file_iterator_loop',
+            ]);
+            for (const tab of state.tabs) {
+              for (const node of tab.nodes) {
+                if (!loopNodeTypes.has(node.type ?? '')) continue;
+                const d = node.data as Record<string, unknown>;
+                const bodyTabId = d.bodyTabId as string | undefined;
+                if (!bodyTabId) continue;
+                const bodyTab = state.tabs.find((t) => t.id === bodyTabId);
+                if (bodyTab && (!bodyTab.parentTabId || !bodyTab.parentNodeId)) {
+                  bodyTab.parentTabId = tab.id;
+                  bodyTab.parentNodeId = node.id;
+                }
+              }
             }
           } catch (err) {
             console.error("[importProject] Failed to parse:", err);
