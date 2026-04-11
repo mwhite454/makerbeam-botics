@@ -1355,22 +1355,146 @@ export function generateModulePreviewCode(opts: {
 
 // ─── F-002: Empty geometry detection ─────────────────────────────────────────
 
+// Known OpenSCAD primitive geometry functions
+const OPENSCAD_PRIMITIVES = new Set([
+  "sphere", "cube", "cylinder", "polyhedron",
+  "circle", "square", "polygon", "text",
+  "import", "surface",
+  "linear_extrude", "rotate_extrude",
+  "hull", "minkowski", "union", "difference", "intersection",
+  "color", "translate", "rotate", "scale", "mirror", "multmatrix",
+  "offset", "projection", "render",
+]);
+
+// Non-geometry keywords / call names that should not count as renderable
+const IGNORED_CALL_NAMES = new Set([
+  "module", "function", "echo", "for", "if", "else",
+  "each", "let", "assert", "use", "include",
+]);
+
+function _stripBlockComments(code: string): string {
+  return code.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+function _stripLineComment(line: string): string {
+  // Avoid stripping // inside strings — good enough approximation for OpenSCAD
+  const idx = line.indexOf("//");
+  return idx >= 0 ? line.slice(0, idx) : line;
+}
+
 /**
- * Returns true if the generated OpenSCAD code contains renderable geometry.
- * Filters out echo(), comments, variable declarations, and module definitions.
+ * Parses `code` into:
+ * - `moduleBodies`: map of module name → the source text of that module's body
+ * - `topLevel`: top-level code (everything outside module definitions)
  */
-export function hasRenderableGeometry(code: string): boolean {
-  const stripped = code.replace(/\/\*[\s\S]*?\*\//g, "");
-  const lines = stripped.split("\n");
+function _extractModules(code: string): {
+  moduleBodies: Map<string, string>;
+  topLevel: string;
+} {
+  const moduleBodies = new Map<string, string>();
+  const topLevelLines: string[] = [];
+  const lines = code.split("\n");
 
-  const nonGeometryPattern =
-    /^\s*($|\/\/|module\s|echo\s*\(|[a-zA-Z_][a-zA-Z0-9_]*\s*=|for\s*\(|\}|\{)/;
+  let i = 0;
+  while (i < lines.length) {
+    const stripped = _stripLineComment(lines[i]).trim();
+    const moduleMatch = stripped.match(/^module\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
 
+    if (!moduleMatch) {
+      topLevelLines.push(lines[i]);
+      i++;
+      continue;
+    }
+
+    // Collect module body by tracking brace depth
+    const moduleName = moduleMatch[1];
+    const bodyLines: string[] = [lines[i]];
+    let depth = (lines[i].match(/\{/g) ?? []).length - (lines[i].match(/\}/g) ?? []).length;
+    i++;
+
+    // Advance until opening brace if not on same line
+    while (depth <= 0 && i < lines.length) {
+      bodyLines.push(lines[i]);
+      depth += (lines[i].match(/\{/g) ?? []).length - (lines[i].match(/\}/g) ?? []).length;
+      i++;
+    }
+
+    // Advance until closing brace
+    while (depth > 0 && i < lines.length) {
+      bodyLines.push(lines[i]);
+      depth += (lines[i].match(/\{/g) ?? []).length - (lines[i].match(/\}/g) ?? []).length;
+      i++;
+    }
+
+    moduleBodies.set(moduleName, bodyLines.join("\n"));
+  }
+
+  return { moduleBodies, topLevel: topLevelLines.join("\n") };
+}
+
+function _lineHasPrimitive(line: string): boolean {
+  return /\b(sphere|cube|cylinder|polyhedron|circle|square|polygon|text|import|surface|linear_extrude|rotate_extrude)\s*\(/.test(line);
+}
+
+function _moduleHasGeometry(
+  name: string,
+  moduleBodies: Map<string, string>,
+  visiting: Set<string>,
+  cache: Map<string, boolean>,
+): boolean {
+  if (cache.has(name)) return cache.get(name)!;
+  if (visiting.has(name)) return false; // cycle guard
+
+  const body = moduleBodies.get(name);
+  if (!body) {
+    // Unknown module — conservatively assume it might render something
+    const result = !IGNORED_CALL_NAMES.has(name);
+    cache.set(name, result);
+    return result;
+  }
+
+  visiting.add(name);
+  const result = _codeHasGeometry(body, moduleBodies, visiting, cache);
+  visiting.delete(name);
+  cache.set(name, result);
+  return result;
+}
+
+function _codeHasGeometry(
+  code: string,
+  moduleBodies: Map<string, string>,
+  visiting: Set<string>,
+  cache: Map<string, boolean>,
+): boolean {
+  const lines = code.split("\n");
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (nonGeometryPattern.test(trimmed)) continue;
-    return true;
+    const trimmed = _stripLineComment(line).trim();
+    if (!trimmed || trimmed === "{" || trimmed === "}") continue;
+    // Skip pure variable assignments
+    if (/^[a-zA-Z_][a-zA-Z0-9_]*\s*=/.test(trimmed)) continue;
+    // Direct primitive call
+    if (_lineHasPrimitive(trimmed)) return true;
+    // Any other call — resolve through module map
+    const callMatches = trimmed.matchAll(/\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g);
+    for (const [, callName] of callMatches) {
+      if (IGNORED_CALL_NAMES.has(callName)) continue;
+      if (OPENSCAD_PRIMITIVES.has(callName)) return true;
+      if (_moduleHasGeometry(callName, moduleBodies, visiting, cache)) return true;
+    }
   }
   return false;
+}
+
+/**
+ * Returns true if the generated OpenSCAD code contains renderable geometry.
+ *
+ * Module-aware: resolves user-defined module calls so that a call to an empty
+ * module does NOT incorrectly classify the code as geometry-bearing.
+ * Ignores: comments, variable assignments, echo(), and module definitions that
+ * contain no primitives or CSG operations.
+ */
+export function hasRenderableGeometry(code: string): boolean {
+  const stripped = _stripBlockComments(code);
+  const { moduleBodies, topLevel } = _extractModules(stripped);
+  return _codeHasGeometry(topLevel, moduleBodies, new Set(), new Map());
 }

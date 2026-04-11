@@ -363,6 +363,13 @@ export const useEditorStore = create<EditorState>()(
           }
 
           // ── F-002: Initialize preview state when entering a loop/module tab ──
+          // Strict numeric parse: only accept purely numeric strings.
+          // Expression values (e.g. "i*2", "WIDTH/2") fall back to the default.
+          function strictNum(v: unknown, fallback: number): number {
+            const n = Number(String(v ?? '').trim());
+            return Number.isFinite(n) ? n : fallback;
+          }
+
           // Clear stale state first
           state.loopPreviewMode = 'single';
           state.modulePreviewArgs = {};
@@ -377,9 +384,9 @@ export const useEditorStore = create<EditorState>()(
             const parentNode = parentNodes.find((n) => n.id === next.parentNodeId);
             if (parentNode) {
               const d = parentNode.data as Record<string, unknown>;
-              const startVal = parseFloat(String(d.start ?? 0)) || 0;
-              const endVal = parseFloat(String(d.end ?? 5)) || 5;
-              const stepVal = parseFloat(String(d.step ?? 1)) || 1;
+              const startVal = strictNum(d.start, 0);
+              const endVal   = strictNum(d.end,   5);
+              const stepVal  = strictNum(d.step,  1);
               state.loopPreviewValue = startVal;
               state.loopPreviewRange = { start: startVal, end: endVal, step: stepVal };
             } else {
@@ -391,9 +398,9 @@ export const useEditorStore = create<EditorState>()(
             const ctxNode = next.nodes.find((n) => n.type === 'loop_context');
             if (ctxNode) {
               const d = ctxNode.data as Record<string, unknown>;
-              const startVal = parseFloat(String(d.start ?? 0)) || 0;
-              const endVal = parseFloat(String(d.end ?? 5)) || 5;
-              const stepVal = parseFloat(String(d.step ?? 1)) || 1;
+              const startVal = strictNum(d.start, 0);
+              const endVal   = strictNum(d.end,   5);
+              const stepVal  = strictNum(d.step,  1);
               state.loopPreviewValue = startVal;
               state.loopPreviewRange = { start: startVal, end: endVal, step: stepVal };
             } else {
@@ -875,7 +882,7 @@ export const useEditorStore = create<EditorState>()(
                 const bodyTabId = d.bodyTabId as string | undefined;
                 if (!bodyTabId) continue;
                 const bodyTab = state.tabs.find((t) => t.id === bodyTabId);
-                if (bodyTab && !bodyTab.parentTabId) {
+                if (bodyTab && (!bodyTab.parentTabId || !bodyTab.parentNodeId)) {
                   bodyTab.parentTabId = tab.id;
                   bodyTab.parentNodeId = node.id;
                 }

@@ -88,11 +88,14 @@ export function ModulePreviewArgs() {
                   <option value="false">false</option>
                 </select>
               ) : (
+                // Use text for all non-boolean types — numeric args can hold
+                // expression values (e.g. "WIDTH/2") that are invalid for
+                // <input type="number"> and would silently render as blank.
                 <input
-                  type={dataType === 'number' ? 'number' : 'text'}
+                  type="text"
                   value={currentVal}
                   onChange={(e) => handleChange(argName, e.target.value)}
-                  className="w-20 text-[10px] text-right bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-purple-200 focus:outline-none focus:border-purple-500"
+                  className="w-20 text-[10px] text-right bg-gray-800 border border-gray-700 rounded px-1 py-0.5 text-purple-200 focus:outline-none focus:border-purple-500 font-mono"
                 />
               )}
             </div>

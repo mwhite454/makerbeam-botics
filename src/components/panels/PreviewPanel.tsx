@@ -315,7 +315,7 @@ export function PreviewPanel() {
         )}
 
         {/* F-002 R6: no renderable geometry in the current scope */}
-        {!previewHasGeometry && renderStatus !== 'rendering' && (
+        {!previewHasGeometry && renderStatus !== 'rendering' && renderStatus !== 'error' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 text-center px-6 z-10 bg-gray-900">
             <div className="text-4xl mb-3 opacity-20">∅</div>
             <p className="text-xs text-gray-500">No renderable geometry in this scope.</p>
