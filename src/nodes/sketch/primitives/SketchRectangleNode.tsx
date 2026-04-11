@@ -1,5 +1,5 @@
 import type { NodeProps } from '@xyflow/react'
-import { SketchBaseNode, ExpressionInput, NumberInput, CheckboxInput } from '../SketchBaseNode'
+import { SketchBaseNode, ExpressionInput, CheckboxInput } from '../SketchBaseNode'
 import type { SketchRectangleData } from '@/types/sketchNodes'
 import { useEditorStore } from '@/store/editorStore'
 

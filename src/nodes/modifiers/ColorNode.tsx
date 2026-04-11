@@ -1,6 +1,6 @@
 import { type NodeProps } from '@xyflow/react'
 import { BlockPicker, SwatchesPicker } from 'react-color'
-import { BaseNode, NumberInput } from '../BaseNode'
+import { BaseNode, ExpressionInput } from '../BaseNode'
 import { useEditorStore } from '@/store/editorStore'
 import type { ColorData } from '@/types/nodes'
 
@@ -95,10 +95,52 @@ export function ColorNode({ id, data, selected }: NodeProps) {
         )}
       </div>
 
-      <NumberInput label="R" value={parseFloat(d.r.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => setRgb(v, d.g, d.b)} />
-      <NumberInput label="G" value={parseFloat(d.g.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => setRgb(d.r, v, d.b)} />
-      <NumberInput label="B" value={parseFloat(d.b.toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => setRgb(d.r, d.g, v)} />
-      <NumberInput label="A" value={parseFloat(Number(d.alpha).toFixed(3))} min={0} max={1} step={0.05} onChange={(v) => update(id, { alpha: clampUnit(v) })} />
+      <label className="flex items-center justify-between gap-2 text-sm text-gray-300">
+        <span>R</span>
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(d.r.toFixed(3))}
+          onChange={(e) => setRgb(clampUnit(e.target.valueAsNumber), d.g, d.b)}
+          className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-right text-gray-100 nodrag"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 text-sm text-gray-300">
+        <span>G</span>
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(d.g.toFixed(3))}
+          onChange={(e) => setRgb(d.r, clampUnit(e.target.valueAsNumber), d.b)}
+          className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-right text-gray-100 nodrag"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-2 text-sm text-gray-300">
+        <span>B</span>
+        <input
+          type="number"
+          min={0}
+          max={1}
+          step={0.05}
+          value={parseFloat(d.b.toFixed(3))}
+          onChange={(e) => setRgb(d.r, d.g, clampUnit(e.target.valueAsNumber))}
+          className="w-24 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-right text-gray-100 nodrag"
+        />
+      </label>
+      <ExpressionInput
+        label="A"
+        value={typeof d.alpha === 'number' ? parseFloat(d.alpha.toFixed(3)) : d.alpha}
+        min={0}
+        max={1}
+        step={0.05}
+        nodeId={id}
+        handleId="in-2"
+        onChange={(v) => update(id, { alpha: typeof v === 'number' ? clampUnit(v) : v })}
+      />
 
       <div className="text-[10px] text-gray-500 leading-snug">
         Colors can be hex (`#RRGGBB`) or a variable via `color` input.
