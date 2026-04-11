@@ -741,5 +741,5 @@ export function generateSketchSvg(model: makerjs.IModel): string {
     useSvgPathOnly: true,
   })
   // Add non-scaling strokes so lines stay crisp regardless of zoom level
-  return svg.replace(/<path /g, '<path vector-effect="non-scaling-stroke" ')
+  return svg.replace(/<path (?!.*vector-effect)/g, '<path vector-effect="non-scaling-stroke" ')
 }
