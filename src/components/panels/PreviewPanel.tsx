@@ -2,10 +2,49 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { useEditorStore } from '@/store/editorStore'
+import { useEditorStore, type CameraState } from '@/store/editorStore'
 import { parseOFF } from '@/utils/parseOFF'
 import { LoopPreviewControls } from './LoopPreviewControls'
 import { ModulePreviewArgs } from './ModulePreviewArgs'
+
+// ─── Orientation gizmo (F-003 R4) ────────────────────────────────────────────
+// A small overlay scene rendered in a corner of the main viewport. Its camera
+// orientation tracks the main camera so the user always has a spatial reference.
+
+const GIZMO_SIZE = 84
+const GIZMO_PADDING = 10
+
+function buildGizmoScene(): { scene: THREE.Scene; camera: THREE.OrthographicCamera } {
+  const scene = new THREE.Scene()
+  // No background — overlay should be transparent so the dark viewport shows through.
+
+  // Axis colors: standard convention but slightly muted to suit the dark theme.
+  const colorX = 0xef4444 // red-500
+  const colorY = 0x22c55e // green-500
+  const colorZ = 0x3b82f6 // blue-500
+
+  const len = 1
+  const headLen = 0.28
+  const headWidth = 0.18
+  const origin = new THREE.Vector3(0, 0, 0)
+
+  scene.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), origin, len, colorX, headLen, headWidth))
+  scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), origin, len, colorY, headLen, headWidth))
+  scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), origin, len, colorZ, headLen, headWidth))
+
+  // A subtle hub at the origin to anchor the axes visually.
+  const hub = new THREE.Mesh(
+    new THREE.SphereGeometry(0.08, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0x6b7280 }), // gray-500
+  )
+  scene.add(hub)
+
+  // Orthographic camera framed slightly outside the unit arrows.
+  const camera = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 100)
+  camera.up.set(0, 0, 1)
+
+  return { scene, camera }
+}
 
 // ─── Shared Three.js scene setup ─────────────────────────────────────────────
 
@@ -21,6 +60,12 @@ function useThreeScene(
     const mesh = buildMesh()
     if (!mesh) return
 
+    // Read camera state for the active tab synchronously at mount (F-003 R1, R2).
+    // Using getState() — we don't want to re-run the effect when the saved state
+    // changes (saving is what happens *during* user interaction).
+    const { activeTabId, cameraStates, setCameraState } = useEditorStore.getState()
+    const savedCamera: CameraState | undefined = cameraStates[activeTabId]
+
     const width  = container.clientWidth
     const height = container.clientHeight
 
@@ -34,6 +79,7 @@ function useThreeScene(
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(width, height)
     renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.autoClear = false
     container.appendChild(renderer.domElement)
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.5)
@@ -53,24 +99,81 @@ function useThreeScene(
 
     const size   = box.getSize(new THREE.Vector3())
     const maxDim = Math.max(size.x, size.y, size.z)
-    camera.position.set(0, -maxDim * 1.8, maxDim * 0.8)
-    camera.lookAt(0, 0, 0)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
     controls.dampingFactor = 0.1
     controls.screenSpacePanning = false
 
+    if (savedCamera) {
+      // Restore the user's previous viewing angle (F-003 R1, R2).
+      camera.position.fromArray(savedCamera.position)
+      camera.up.fromArray(savedCamera.up)
+      camera.zoom = savedCamera.zoom
+      camera.updateProjectionMatrix()
+      controls.target.fromArray(savedCamera.target)
+      controls.update()
+    } else {
+      // Default framing from geometry bounds.
+      camera.position.set(0, -maxDim * 1.8, maxDim * 0.8)
+      camera.lookAt(0, 0, 0)
+      controls.update()
+    }
+
     const grid = new THREE.GridHelper(maxDim * 2, 10, 0x374151, 0x1f2937)
     grid.position.z = box.min.z - center.z
     grid.rotation.x = Math.PI / 2
     scene.add(grid)
 
+    // ── Orientation gizmo (F-003 R4) ─────────────────────────────────────────
+    const { scene: gizmoScene, camera: gizmoCamera } = buildGizmoScene()
+    const GIZMO_CAM_DIST = 4
+
+    // Persist the user's camera state to the store (F-003 R1, R2). We listen to
+    // OrbitControls 'end' (fires when the user releases the mouse) rather than
+    // 'change' (per-frame) to avoid flooding zustand with updates. The cleanup
+    // function also captures state as a safety net in case the effect re-runs
+    // mid-interaction (e.g., a re-render arrives while the user is orbiting).
+    const tabIdAtMount = activeTabId
+    const persistCamera = () => {
+      setCameraState(tabIdAtMount, {
+        position: camera.position.toArray() as [number, number, number],
+        target: controls.target.toArray() as [number, number, number],
+        up: camera.up.toArray() as [number, number, number],
+        zoom: camera.zoom,
+      })
+    }
+    controls.addEventListener('end', persistCamera)
+
     let animId: number
     const animate = () => {
       animId = requestAnimationFrame(animate)
       controls.update()
+
+      // Main scene
+      const w = container.clientWidth
+      const h = container.clientHeight
+      renderer.setViewport(0, 0, w, h)
+      renderer.setScissor(0, 0, w, h)
+      renderer.setScissorTest(true)
+      renderer.clear()
       renderer.render(scene, camera)
+
+      // Gizmo overlay — bottom-right corner, click-through (separate viewport).
+      const gx = w - GIZMO_SIZE - GIZMO_PADDING
+      const gy = GIZMO_PADDING
+      // Sync gizmo camera to main camera direction so it reflects orientation.
+      const dir = new THREE.Vector3()
+      camera.getWorldDirection(dir)
+      gizmoCamera.position.copy(dir.clone().multiplyScalar(-GIZMO_CAM_DIST))
+      gizmoCamera.up.copy(camera.up)
+      gizmoCamera.lookAt(0, 0, 0)
+
+      renderer.setViewport(gx, gy, GIZMO_SIZE, GIZMO_SIZE)
+      renderer.setScissor(gx, gy, GIZMO_SIZE, GIZMO_SIZE)
+      renderer.setScissorTest(true)
+      renderer.clearDepth()
+      renderer.render(gizmoScene, gizmoCamera)
     }
     animate()
 
@@ -95,11 +198,30 @@ function useThreeScene(
     })
 
     return () => {
+      // Capture the final camera state before teardown so the next mount can
+      // restore it (F-003 R1: seamless across re-renders).
+      setCameraState(tabIdAtMount, {
+        position: camera.position.toArray() as [number, number, number],
+        target: controls.target.toArray() as [number, number, number],
+        up: camera.up.toArray() as [number, number, number],
+        zoom: camera.zoom,
+      })
+
       cancelAnimationFrame(animId)
+      controls.removeEventListener('end', persistCamera)
       controls.dispose()
       renderer.dispose()
       disposables.forEach((g) => g.dispose())
       materials.forEach((m) => m.dispose())
+      // Dispose gizmo resources
+      gizmoScene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose()
+          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose())
+          else obj.material.dispose()
+        }
+        // ArrowHelper is a Group containing Line + Mesh — its dispose() is on children.
+      })
       ro.disconnect()
       container.removeChild(renderer.domElement)
     }

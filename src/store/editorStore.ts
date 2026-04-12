@@ -16,6 +16,19 @@ import type { AllSketchNodeData } from "@/types/sketchNodes";
 export type RenderStatus = "idle" | "rendering" | "done" | "error";
 export type PreviewMode = "off" | "stl" | "png";
 
+// ─── Camera state (F-003: Preview Panel Enhancements) ────────────────────────
+
+/**
+ * Snapshot of a Three.js PerspectiveCamera + OrbitControls used to restore
+ * the user's viewing angle across re-renders and tab switches (F-003 R1, R2).
+ */
+export interface CameraState {
+  position: [number, number, number];
+  target: [number, number, number];
+  up: [number, number, number];
+  zoom: number;
+}
+
 // ─── Global Parameters ────────────────────────────────────────────────────────
 
 export type GlobalParamType =
@@ -159,6 +172,10 @@ interface EditorState {
   setPreviewMode: (m: PreviewMode) => void;
   setAutoRender: (v: boolean) => void;
 
+  // ── Camera state per tab (F-003) ────────────────────────────────────────────
+  cameraStates: Record<string, CameraState>;
+  setCameraState: (tabId: string, state: CameraState) => void;
+
   // ── Sub-editor preview state (F-002) ────────────────────────────────────────
   loopPreviewMode: 'single' | 'range';
   loopPreviewValue: number;
@@ -254,6 +271,7 @@ export const useEditorStore = create<EditorState>()(
           const idx = state.tabs.findIndex((t) => t.id === id);
           if (idx === -1) return;
           state.tabs.splice(idx, 1);
+          delete state.cameraStates[id];
           if (state.activeTabId === id) {
             state.activeTabId = state.tabs[0].id;
             const tab = getActiveTab(state);
@@ -700,6 +718,13 @@ export const useEditorStore = create<EditorState>()(
           state.autoRender = v;
         }),
 
+      // ── Camera state per tab (F-003) ──────────────────────────────────────────
+      cameraStates: {},
+      setCameraState: (tabId, cs) =>
+        set((state) => {
+          state.cameraStates[tabId] = cs;
+        }),
+
       // ── Sub-editor preview state (F-002) ──────────────────────────────────────
       loopPreviewMode: 'single',
       loopPreviewValue: 0,
@@ -773,6 +798,7 @@ export const useEditorStore = create<EditorState>()(
           state.globalParameters = [];
           state.importedFiles = {};
           state.projectName = "";
+          state.cameraStates = {};
         }),
 
       // ── Imported files ────────────────────────────────────────────────────
