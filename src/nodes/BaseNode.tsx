@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useContext } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
+import { CirclePause } from "lucide-react";
 import { CATEGORY_COLORS, CATEGORY_TEXT } from "@/types/nodes";
 import { NodeMetaFields } from "@/components/NodeMetaFields";
 import { useEditorStore } from "@/store/editorStore";
@@ -150,7 +151,7 @@ export function BaseNode({
         <div className="flex items-center">
           <button
             onClick={onToggleHalt}
-            className={`transition-opacity text-sm leading-none nodrag nopan ${
+            className={`flex items-center transition-all leading-none nodrag nopan ${
               isHalted
                 ? "opacity-100 text-red-400 drop-shadow-[0_0_4px_rgba(248,113,113,0.6)]"
                 : "opacity-30 hover:opacity-60"
@@ -161,7 +162,10 @@ export function BaseNode({
                 : "Halt here (render stops at this node)"
             }
           >
-            ⏸
+            <CirclePause
+              size={12}
+              fill={isHalted ? "currentColor" : "none"}
+            />
           </button>
           <button
             onClick={onDelete}
