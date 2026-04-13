@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { XCircle } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
 import { ExportDropdown } from "./ExportDropdown";
 import { useOpenSCAD } from "@/wasm/useOpenSCAD";
@@ -222,10 +223,11 @@ export function Toolbar({ onRender }: ToolbarProps) {
       {/* Halt controls */}
       {hasHalts && (
         <button
-          className="px-2 py-1 rounded text-[11px] font-semibold bg-red-600/80 hover:bg-red-500 text-white transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold bg-red-600/80 hover:bg-red-500 text-white transition-colors"
           onClick={clearAllHalts}
           title="Remove all halt breakpoints"
         >
+          <XCircle size={14} />
           Clear Halts
         </button>
       )}
