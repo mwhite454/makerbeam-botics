@@ -161,10 +161,17 @@ export function BaseNode({
                 ? "Release halt (render resumes past this node)"
                 : "Halt here (render stops at this node)"
             }
+            aria-label={
+              isHalted
+                ? "Release halt (render resumes past this node)"
+                : "Halt here (render stops at this node)"
+            }
           >
             <CirclePause
               size={12}
               fill={isHalted ? "currentColor" : "none"}
+              aria-hidden={true}
+              focusable={false}
             />
           </button>
           <button
