@@ -128,6 +128,8 @@ function useThreeScene(
     // ── Orientation gizmo (F-003 R4) ─────────────────────────────────────────
     const { scene: gizmoScene, camera: gizmoCamera } = buildGizmoScene()
     const GIZMO_CAM_DIST = 4
+    // Reused per-frame to avoid allocating a new Vector3 each animation tick.
+    const gizmoDir = new THREE.Vector3()
 
     // Persist the user's camera state to the store (F-003 R1, R2). We listen to
     // OrbitControls 'end' (fires when the user releases the mouse) rather than
@@ -163,9 +165,9 @@ function useThreeScene(
       const gx = w - GIZMO_SIZE - GIZMO_PADDING
       const gy = GIZMO_PADDING
       // Sync gizmo camera to main camera direction so it reflects orientation.
-      const dir = new THREE.Vector3()
-      camera.getWorldDirection(dir)
-      gizmoCamera.position.copy(dir.clone().multiplyScalar(-GIZMO_CAM_DIST))
+      // Reuse `gizmoDir` — no per-frame allocation.
+      camera.getWorldDirection(gizmoDir)
+      gizmoCamera.position.copy(gizmoDir).multiplyScalar(-GIZMO_CAM_DIST)
       gizmoCamera.up.copy(camera.up)
       gizmoCamera.lookAt(0, 0, 0)
 
@@ -213,14 +215,19 @@ function useThreeScene(
       renderer.dispose()
       disposables.forEach((g) => g.dispose())
       materials.forEach((m) => m.dispose())
-      // Dispose gizmo resources
+      // Dispose gizmo resources. ArrowHelper is a Group containing a Line
+      // (shaft) and a Mesh (head) — we must dispose both renderable child
+      // types, or the Line's geometry/material leaks across remounts.
       gizmoScene.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
+        if (
+          obj instanceof THREE.Mesh ||
+          obj instanceof THREE.Line ||
+          obj instanceof THREE.LineSegments
+        ) {
           obj.geometry.dispose()
           if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose())
           else obj.material.dispose()
         }
-        // ArrowHelper is a Group containing Line + Mesh — its dispose() is on children.
       })
       ro.disconnect()
       container.removeChild(renderer.domElement)
