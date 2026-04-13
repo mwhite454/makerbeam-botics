@@ -189,8 +189,15 @@ export function EditorPanel() {
               { type: "select" as const, id: currentId, selected: false },
             ]);
           }
-          // Visually highlight the edge via XYFlow selection
+          // Clear any existing edge selection first so the focused edge is
+          // the only visually highlighted one (guards against Shift-click
+          // multi-selection leaving stale selected edges).
+          const selectedEdgeChanges = edges
+            .filter((e) => e.selected)
+            .map((e) => ({ type: "select" as const, id: e.id, selected: false }));
+          // Visually highlight the focused edge via XYFlow selection
           onEdgesChange([
+            ...selectedEdgeChanges,
             { type: "select" as const, id: outputEdge.id, selected: true },
           ]);
           setFocusedEdgeId(outputEdge.id);
@@ -215,10 +222,16 @@ export function EditorPanel() {
               .measured as { width?: number; height?: number } | undefined;
             const w = measured?.width ?? 200;
             const h = measured?.height ?? 150;
+            // Use absolute flow position so grouped nodes (which store
+            // position relative to their parent) are placed correctly.
+            const srcExt = sourceNode as typeof sourceNode & {
+              positionAbsolute?: { x: number; y: number };
+            };
+            const absolutePos = srcExt.positionAbsolute ?? sourceNode.position;
             // Position dropdown just to the right of the source node's output
             const screenPos = rfInstance.current.flowToScreenPosition({
-              x: sourceNode.position.x + w + 24,
-              y: sourceNode.position.y + h / 2 - 20,
+              x: absolutePos.x + w + 24,
+              y: absolutePos.y + h / 2 - 20,
             });
             setQuickInsert({
               edgeId: focusedEdgeId,
@@ -318,18 +331,64 @@ export function EditorPanel() {
         return;
       }
 
-      // Position: midpoint between source and target, or offset from source
-      let newX: number;
-      let newY: number;
-      if (targetNode) {
-        newX = (sourceNode.position.x + targetNode.position.x) / 2;
-        newY = (sourceNode.position.y + targetNode.position.y) / 2;
+      // Helper: resolve the absolute flow-coordinate position of a node.
+      // Grouped nodes store position relative to their parentId; we use
+      // positionAbsolute (maintained by XYFlow internally) when available,
+      // and fall back to walking the parent chain otherwise.
+      const getAbsolutePosition = (n: Node): { x: number; y: number } => {
+        const nExt = n as Node & {
+          positionAbsolute?: { x: number; y: number };
+        };
+        if (nExt.positionAbsolute) return nExt.positionAbsolute;
+        let x = n.position.x;
+        let y = n.position.y;
+        let pid = n.parentId;
+        while (pid) {
+          const p = rfInstance.current?.getNode(pid);
+          if (!p) break;
+          x += p.position.x;
+          y += p.position.y;
+          pid = p.parentId;
+        }
+        return { x, y };
+      };
+
+      const srcAbsolute = getAbsolutePosition(sourceNode);
+      const tgtAbsolute = targetNode ? getAbsolutePosition(targetNode) : null;
+
+      // Compute insertion point in absolute flow coordinates
+      let newAbsX: number;
+      let newAbsY: number;
+      if (tgtAbsolute) {
+        newAbsX = (srcAbsolute.x + tgtAbsolute.x) / 2;
+        newAbsY = (srcAbsolute.y + tgtAbsolute.y) / 2;
       } else {
         const measured = (sourceNode as Record<string, unknown>).measured as
           | { width?: number }
           | undefined;
-        newX = sourceNode.position.x + (measured?.width ?? 200) + 120;
-        newY = sourceNode.position.y;
+        newAbsX = srcAbsolute.x + (measured?.width ?? 200) + 120;
+        newAbsY = srcAbsolute.y;
+      }
+
+      // Assign to a parent group when source and target share one, or when
+      // only the source is in a group and there is no target.
+      const newParentId: string | undefined =
+        targetNode && sourceNode.parentId === targetNode.parentId
+          ? sourceNode.parentId
+          : !targetNode
+            ? sourceNode.parentId
+            : undefined;
+
+      // Convert absolute coords back to parent-relative if needed
+      let newX = newAbsX;
+      let newY = newAbsY;
+      if (newParentId) {
+        const parentNode = rfInstance.current.getNode(newParentId);
+        if (parentNode) {
+          const parentAbsolute = getAbsolutePosition(parentNode);
+          newX = newAbsX - parentAbsolute.x;
+          newY = newAbsY - parentAbsolute.y;
+        }
       }
 
       const newNodeId = `${item.type}-${nodeIdCounter++}`;
@@ -338,6 +397,7 @@ export function EditorPanel() {
         type: item.type,
         position: { x: newX, y: newY },
         data: { ...item.defaultData },
+        ...(newParentId ? { parentId: newParentId } : {}),
       };
 
       // Remove the original edge

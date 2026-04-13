@@ -94,9 +94,13 @@ export function QuickInsertDropdown({
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
+        e.stopPropagation();
+        if (filtered.length === 0) return;
         setHighlightIndex((i) => Math.min(i + 1, filtered.length - 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        e.stopPropagation();
+        if (filtered.length === 0) return;
         setHighlightIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
         e.preventDefault();
@@ -115,8 +119,8 @@ export function QuickInsertDropdown({
   // Clamp position so the dropdown stays within the viewport
   const POPUP_W = 224; // w-56
   const POPUP_H = 320; // approx max-h
-  const left = Math.min(screenX, window.innerWidth - POPUP_W - 8);
-  const top = Math.min(screenY, window.innerHeight - POPUP_H - 8);
+  const left = Math.max(8, Math.min(screenX, window.innerWidth - POPUP_W - 8));
+  const top = Math.max(8, Math.min(screenY, window.innerHeight - POPUP_H - 8));
 
   return (
     <div

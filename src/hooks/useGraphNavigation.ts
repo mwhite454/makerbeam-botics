@@ -42,9 +42,35 @@ export function useGraphNavigation({
         | undefined;
       const w = measured?.width ?? 200;
       const h = measured?.height ?? 150;
+
+      // Grouped nodes store position relative to their parent; use
+      // positionAbsolute (set by XYFlow internally) when available.
+      // Fall back to walking the parent chain when positionAbsolute is absent.
+      const nodeExt = node as typeof node & {
+        positionAbsolute?: { x: number; y: number };
+        parentId?: string;
+      };
+      let absolutePosition: { x: number; y: number } =
+        nodeExt.positionAbsolute ?? { ...node.position };
+
+      if (!nodeExt.positionAbsolute && nodeExt.parentId) {
+        let parentId: string | undefined = nodeExt.parentId;
+        while (parentId) {
+          const parentNode = rfInstance.current.getNode(parentId) as
+            | (typeof node & { parentId?: string })
+            | undefined;
+          if (!parentNode) break;
+          absolutePosition = {
+            x: absolutePosition.x + parentNode.position.x,
+            y: absolutePosition.y + parentNode.position.y,
+          };
+          parentId = parentNode.parentId;
+        }
+      }
+
       rfInstance.current.setCenter(
-        node.position.x + w / 2,
-        node.position.y + h / 2,
+        absolutePosition.x + w / 2,
+        absolutePosition.y + h / 2,
         { duration: 300 },
       );
     },
