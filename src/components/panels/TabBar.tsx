@@ -1,5 +1,21 @@
 import { useState } from 'react'
-import { useEditorStore } from '@/store/editorStore'
+import { Box, RefreshCw, Puzzle, PenTool, Settings } from 'lucide-react'
+import { useEditorStore, type TabType } from '@/store/editorStore'
+
+function TabTypeIcon({ tabType }: { tabType: TabType }) {
+  switch (tabType) {
+    case 'main':
+      return <Box size={10} className="text-blue-400 shrink-0" />
+    case 'loop':
+      return <RefreshCw size={10} className="text-amber-400 shrink-0" />
+    case 'module':
+      return <Puzzle size={10} className="text-purple-400 shrink-0" />
+    case 'sketch':
+      return <PenTool size={10} className="text-pink-400 shrink-0" />
+    default:
+      return null
+  }
+}
 
 export function TabBar() {
   const { tabs, activeTabId, addTab, removeTab, renameTab, setActiveTab } = useEditorStore()
@@ -38,22 +54,8 @@ export function TabBar() {
           }}
           onDoubleClick={() => startRename(tab.id, tab.label)}
         >
-          {/* Tab type badge */}
-          {tab.tabType === 'module' && (
-            <span className="text-[8px] bg-purple-600/50 text-purple-300 rounded px-1 py-0 font-bold uppercase">
-              mod
-            </span>
-          )}
-          {tab.tabType === 'sketch' && (
-            <span className="text-[8px] bg-pink-600/50 text-pink-300 rounded px-1 py-0 font-bold uppercase">
-              skt
-            </span>
-          )}
-          {tab.tabType === 'loop' && (
-            <span className="text-[8px] bg-amber-700/60 text-amber-300 rounded px-1 py-0 font-bold uppercase">
-              lp
-            </span>
-          )}
+          {/* Tab type icon (F-006) */}
+          <TabTypeIcon tabType={tab.tabType} />
 
           {/* Tab name (editable) */}
           {editing === tab.id ? (
@@ -134,7 +136,7 @@ export function TabBar() {
         onClick={() => setShowParametersPanel(!showParametersPanel)}
         title="Global parameters table"
       >
-        <span className="text-[9px] opacity-70">⚙</span>
+        <Settings size={10} className="shrink-0 opacity-70" />
         Parameters
       </button>
     </div>
