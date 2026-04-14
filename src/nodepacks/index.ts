@@ -3,15 +3,28 @@ import type { NodePackDefinition } from '@/types/nodePack'
 import type { PaletteItem } from '@/types/nodes'
 import { CATEGORY_COLORS, CATEGORY_TEXT, CATEGORY_LABELS } from '@/types/nodes'
 import { makerbeamPack } from './makerbeam'
+import {
+  bosl2Shapes3dPack,
+  bosl2Shapes2dPack,
+  bosl2TransformsPack,
+  bosl2DistributorsPack,
+  bosl2RoundingPack,
+  bosl2MechanicalPack,
+  bosl2AttachmentsPack,
+} from './bosl2'
 
 // ─── Pack registry ────────────────────────────────────────────────────────────
 // Add new packs here. Each entry is a self-contained NodePackDefinition.
-// Example for future use:
-//   import { bosl2Pack } from './bosl2'
-//   NODE_PACKS.push(bosl2Pack)
 
 export const NODE_PACKS: NodePackDefinition[] = [
   makerbeamPack,
+  bosl2Shapes3dPack,
+  bosl2Shapes2dPack,
+  bosl2TransformsPack,
+  bosl2DistributorsPack,
+  bosl2RoundingPack,
+  bosl2MechanicalPack,
+  bosl2AttachmentsPack,
 ]
 
 // ─── Populate core category maps with pack entries ───────────────────────────
