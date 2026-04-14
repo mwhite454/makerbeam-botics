@@ -126,6 +126,10 @@ import { MECHANICAL_PALETTE } from './palette/mechanicalPalette'
 import { ATTACHMENTS_PALETTE } from './palette/attachmentsPalette'
 
 // ─── Pack definitions (Option A: one pack per sub-category) ──────────────────
+// NOTE: preamble is assigned to bosl2Shapes3dPack ONLY.
+// The codegen pipeline calls pack.preamble(nodes) for every registered pack, so
+// assigning bosl2Preamble to all 7 packs would emit the includes 7× in the
+// generated output. One pack owns the preamble; the others omit the field.
 
 export const bosl2Shapes3dPack: NodePackDefinition = {
   id: 'bosl2_shapes3d',
@@ -177,7 +181,6 @@ export const bosl2Shapes2dPack: NodePackDefinition = {
   },
   paletteItems: SHAPES2D_PALETTE,
   codegenHandlers: shapes2dCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2TransformsPack: NodePackDefinition = {
@@ -208,7 +211,6 @@ export const bosl2TransformsPack: NodePackDefinition = {
   },
   paletteItems: TRANSFORMS_PALETTE,
   codegenHandlers: transformsCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2DistributorsPack: NodePackDefinition = {
@@ -229,7 +231,6 @@ export const bosl2DistributorsPack: NodePackDefinition = {
   },
   paletteItems: DISTRIBUTORS_PALETTE,
   codegenHandlers: distributorsCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2RoundingPack: NodePackDefinition = {
@@ -254,7 +255,6 @@ export const bosl2RoundingPack: NodePackDefinition = {
   },
   paletteItems: ROUNDING_PALETTE,
   codegenHandlers: roundingCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2MechanicalPack: NodePackDefinition = {
@@ -282,7 +282,6 @@ export const bosl2MechanicalPack: NodePackDefinition = {
   },
   paletteItems: MECHANICAL_PALETTE,
   codegenHandlers: mechanicalCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2AttachmentsPack: NodePackDefinition = {
@@ -303,5 +302,4 @@ export const bosl2AttachmentsPack: NodePackDefinition = {
   },
   paletteItems: ATTACHMENTS_PALETTE,
   codegenHandlers: attachmentsCodegen,
-  preamble: bosl2Preamble,
 }

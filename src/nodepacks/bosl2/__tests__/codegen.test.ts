@@ -2,6 +2,16 @@ import { describe, it, expect } from 'vitest'
 import type { Node } from '@xyflow/react'
 import type { CodegenContext } from '@/types/nodePack'
 
+import {
+  bosl2Shapes3dPack,
+  bosl2Shapes2dPack,
+  bosl2TransformsPack,
+  bosl2DistributorsPack,
+  bosl2RoundingPack,
+  bosl2MechanicalPack,
+  bosl2AttachmentsPack,
+} from '../index'
+
 import { shapes3dCodegen } from '../codegen/shapes3dCodegen'
 import { shapes2dCodegen } from '../codegen/shapes2dCodegen'
 import { transformsCodegen } from '../codegen/transformsCodegen'
@@ -1063,6 +1073,59 @@ describe('BOSL2 Codegen Handlers', () => {
 
     it('returns null for empty node array', () => {
       expect(bosl2Preamble([])).toBeNull()
+    })
+  })
+
+  // ─── Regression: preamble must be on exactly one pack ────────────────────
+  // The codegen pipeline calls pack.preamble(nodes) for every registered pack.
+  // If multiple packs share the same preamble function the includes are emitted
+  // once per pack, producing duplicate include lines in the output.
+
+  describe('Pack registry — preamble ownership', () => {
+    const allPacks = [
+      bosl2Shapes3dPack,
+      bosl2Shapes2dPack,
+      bosl2TransformsPack,
+      bosl2DistributorsPack,
+      bosl2RoundingPack,
+      bosl2MechanicalPack,
+      bosl2AttachmentsPack,
+    ]
+
+    it('exactly one BOSL2 pack owns a preamble function', () => {
+      const packsWithPreamble = allPacks.filter((p) => p.preamble != null)
+      expect(packsWithPreamble).toHaveLength(1)
+    })
+
+    it('simulated pipeline does not emit duplicate std.scad include', () => {
+      const nodes: Node[] = [
+        { id: '1', type: 'bosl2_cuboid', position: { x: 0, y: 0 }, data: {} },
+      ]
+      // Simulate what codegen/index.ts does: call preamble on every pack
+      let combined = ''
+      for (const pack of allPacks) {
+        if (pack.preamble) {
+          const result = pack.preamble(nodes)
+          if (result) combined += result
+        }
+      }
+      const count = (combined.match(/include <BOSL2\/std\.scad>/g) || []).length
+      expect(count).toBe(1)
+    })
+
+    it('simulated pipeline does not emit duplicate gears include', () => {
+      const nodes: Node[] = [
+        { id: '1', type: 'bosl2_spur_gear', position: { x: 0, y: 0 }, data: {} },
+      ]
+      let combined = ''
+      for (const pack of allPacks) {
+        if (pack.preamble) {
+          const result = pack.preamble(nodes)
+          if (result) combined += result
+        }
+      }
+      const count = (combined.match(/include <BOSL2\/gears\.scad>/g) || []).length
+      expect(count).toBe(1)
     })
   })
 })
