@@ -6,8 +6,8 @@ import type { CodegenContext } from '@/types/nodePack'
 export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext) => string> = {
   bosl2_diff: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const remove = String(d.remove ?? 'remove')
-    const keep = String(d.keep ?? '')
+    const remove = ctx.escapeString(d.remove ?? 'remove')
+    const keep = ctx.escapeString(d.keep ?? '')
     let params = `"${remove}"`
     if (keep) params += `, keep = "${keep}"`
     return ctx.emitTransform(`diff(${params})`)
@@ -15,8 +15,8 @@ export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext
 
   bosl2_intersect: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const intersect = String(d.intersect ?? 'intersect')
-    const keep = String(d.keep ?? '')
+    const intersect = ctx.escapeString(d.intersect ?? 'intersect')
+    const keep = ctx.escapeString(d.keep ?? '')
     let params = `"${intersect}"`
     if (keep) params += `, keep = "${keep}"`
     return ctx.emitTransform(`intersect(${params})`)
@@ -39,13 +39,13 @@ export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext
 
   bosl2_tag: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const tag = String(d.tag ?? 'remove')
+    const tag = ctx.escapeString(d.tag ?? 'remove')
     return ctx.emitTransform(`tag("${tag}")`)
   },
 
   bosl2_recolor: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const c = String(d.c ?? 'red')
+    const c = ctx.escapeString(d.c ?? 'red')
     return ctx.emitTransform(`recolor("${c}")`)
   },
 
@@ -63,7 +63,7 @@ export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext
     const size = `[${ctx.expr(d.x)}, ${ctx.expr(d.y)}, ${ctx.expr(d.z)}]`
     let params = `size = ${size}`
     const sp = ctx.expr(d.spread); if (sp !== '0') params += `, spread = ${sp}`
-    const cp = String(d.cutpath ?? ''); if (cp) params += `, cutpath = "${cp}"`
+    const cp = String(d.cutpath ?? ''); if (cp) params += `, cutpath = "${ctx.escapeString(cp)}"`
     return ctx.emitTransform(`partition(${params})`)
   },
 }

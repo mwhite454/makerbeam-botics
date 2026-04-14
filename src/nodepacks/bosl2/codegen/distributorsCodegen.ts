@@ -7,21 +7,21 @@ export const distributorsCodegen: Record<string, (node: Node, ctx: CodegenContex
   bosl2_xcopies: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     let params = `spacing = ${ctx.expr(d.spacing)}`
-    const n = ctx.expr(d.n); if (n !== '0' && n !== '2') params += `, n = ${n}`
+    const n = ctx.expr(d.n); if (n !== '2') params += `, n = ${n}`
     return ctx.emitTransform(`xcopies(${params})`)
   },
 
   bosl2_ycopies: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     let params = `spacing = ${ctx.expr(d.spacing)}`
-    const n = ctx.expr(d.n); if (n !== '0' && n !== '2') params += `, n = ${n}`
+    const n = ctx.expr(d.n); if (n !== '2') params += `, n = ${n}`
     return ctx.emitTransform(`ycopies(${params})`)
   },
 
   bosl2_zcopies: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     let params = `spacing = ${ctx.expr(d.spacing)}`
-    const n = ctx.expr(d.n); if (n !== '0' && n !== '2') params += `, n = ${n}`
+    const n = ctx.expr(d.n); if (n !== '2') params += `, n = ${n}`
     return ctx.emitTransform(`zcopies(${params})`)
   },
 

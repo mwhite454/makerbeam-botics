@@ -248,18 +248,6 @@ describe('BOSL2 Codegen Handlers', () => {
       const result = shapes3dCodegen.bosl2_text3d(node, mockCtx)
       expect(result).toBe('  text3d("Hello", h = 2, size = 10, font = "Liberation Sans");\n')
     })
-
-    it('fillet – default', () => {
-      const node = mockNode('bosl2_fillet', { h: 10, r: 3, ang: 90, anchor: 'CENTER', spin: 0, orient: 'UP' })
-      const result = shapes3dCodegen.bosl2_fillet(node, mockCtx)
-      expect(result).toBe('  fillet(h = 10, r = 3);\n')
-    })
-
-    it('fillet – with custom angle', () => {
-      const node = mockNode('bosl2_fillet', { h: 10, r: 3, ang: 45, anchor: 'CENTER', spin: 0, orient: 'UP' })
-      const result = shapes3dCodegen.bosl2_fillet(node, mockCtx)
-      expect(result).toBe('  fillet(h = 10, r = 3, ang = 45);\n')
-    })
   })
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -348,13 +336,13 @@ describe('BOSL2 Codegen Handlers', () => {
     it('squircle – default', () => {
       const node = mockNode('bosl2_squircle', { x: 20, y: 20, squareness: 0.5, anchor: 'CENTER', spin: 0 })
       const result = shapes2dCodegen.bosl2_squircle(node, mockCtx)
-      expect(result).toBe('  squircle([20, 20]);\n')
+      expect(result).toBe('  squircle(size = [20, 20]);\n')
     })
 
     it('squircle – custom squareness', () => {
       const node = mockNode('bosl2_squircle', { x: 20, y: 20, squareness: 0.8, anchor: 'CENTER', spin: 0 })
       const result = shapes2dCodegen.bosl2_squircle(node, mockCtx)
-      expect(result).toBe('  squircle([20, 20], squareness = 0.8);\n')
+      expect(result).toBe('  squircle(size = [20, 20], squareness = 0.8);\n')
     })
 
     it('ring – default', () => {
@@ -550,6 +538,12 @@ describe('BOSL2 Codegen Handlers', () => {
       expect(result).toContain('zcopies(spacing = 10, n = 3)')
     })
 
+    it('xcopies – n=0 emitted (spacing-only mode)', () => {
+      const node = mockNode('bosl2_xcopies', { spacing: 10, n: 0 })
+      const result = distributorsCodegen.bosl2_xcopies(node, mockCtx)
+      expect(result).toContain('xcopies(spacing = 10, n = 0)')
+    })
+
     it('grid_copies – default', () => {
       const node = mockNode('bosl2_grid_copies', { spacing_x: 10, spacing_y: 10, n_x: 3, n_y: 3, stagger: false })
       const result = distributorsCodegen.bosl2_grid_copies(node, mockCtx)
@@ -637,15 +631,15 @@ describe('BOSL2 Codegen Handlers', () => {
     })
 
     it('skin – default', () => {
-      const node = mockNode('bosl2_skin', { slices: 10, method: 'reindex', style: 'min_edge' })
+      const node = mockNode('bosl2_skin', { shapes: '[]', slices: 10, method: 'reindex', style: 'min_edge' })
       const result = roundingCodegen.bosl2_skin(node, mockCtx)
-      expect(result).toContain('skin(slices = 10)')
+      expect(result).toBe('  skin([]);\n')
     })
 
     it('skin – custom method and style', () => {
-      const node = mockNode('bosl2_skin', { slices: 20, method: 'distance', style: 'convex' })
+      const node = mockNode('bosl2_skin', { shapes: '[circle(10), circle(5)]', slices: 20, method: 'distance', style: 'convex' })
       const result = roundingCodegen.bosl2_skin(node, mockCtx)
-      expect(result).toContain('skin(slices = 20, method = "distance", style = "convex")')
+      expect(result).toBe('  skin([circle(10), circle(5)], slices = 20, method = "distance", style = "convex");\n')
     })
 
     it('linear_sweep – default', () => {
@@ -676,6 +670,13 @@ describe('BOSL2 Codegen Handlers', () => {
       expect(result).toContain('angle = 180')
     })
 
+    it('rotate_sweep – non-default anchor with default angle', () => {
+      const node = mockNode('bosl2_rotate_sweep', { angle: 360, anchor: 'BOT', spin: 0, orient: 'UP' })
+      const result = roundingCodegen.bosl2_rotate_sweep(node, mockCtx)
+      expect(result).toContain('rotate_sweep(anchor = BOT)')
+      expect(result).not.toContain(', anchor')
+    })
+
     it('path_sweep – default', () => {
       const node = mockNode('bosl2_path_sweep', { method: 'incremental', twist: 0, closed: false, anchor: 'CENTER', spin: 0, orient: 'UP' })
       const result = roundingCodegen.bosl2_path_sweep(node, mockCtx)
@@ -688,6 +689,13 @@ describe('BOSL2 Codegen Handlers', () => {
       expect(result).toContain('method = "natural"')
       expect(result).toContain('twist = 180')
       expect(result).toContain('closed = true')
+    })
+
+    it('path_sweep – non-default anchor with defaults', () => {
+      const node = mockNode('bosl2_path_sweep', { method: 'incremental', twist: 0, closed: false, anchor: 'BOT', spin: 0, orient: 'UP' })
+      const result = roundingCodegen.bosl2_path_sweep(node, mockCtx)
+      expect(result).toContain('path_sweep(anchor = BOT)')
+      expect(result).not.toContain(', anchor')
     })
 
     it('spiral_sweep – default', () => {
@@ -738,6 +746,18 @@ describe('BOSL2 Codegen Handlers', () => {
       expect(result).toContain('closed = true')
       expect(result).toContain('endcaps = "round"')
     })
+
+    it('fillet – default', () => {
+      const node = mockNode('bosl2_fillet', { h: 10, r: 3, ang: 90, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const result = roundingCodegen.bosl2_fillet(node, mockCtx)
+      expect(result).toBe('  fillet(h = 10, r = 3);\n')
+    })
+
+    it('fillet – with custom angle', () => {
+      const node = mockNode('bosl2_fillet', { h: 10, r: 3, ang: 45, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const result = roundingCodegen.bosl2_fillet(node, mockCtx)
+      expect(result).toBe('  fillet(h = 10, r = 3, ang = 45);\n')
+    })
   })
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -760,7 +780,7 @@ describe('BOSL2 Codegen Handlers', () => {
     })
 
     it('rack – default', () => {
-      const node = mockNode('bosl2_rack', { mod: 2, teeth: 10, thickness: 5, pressure_angle: 20, helical: 0, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const node = mockNode('bosl2_rack', { mod: 2, teeth: 10, thickness: 5, height: 0, pressure_angle: 20, helical: 0, anchor: 'CENTER', spin: 0, orient: 'UP' })
       const result = mechanicalCodegen.bosl2_rack(node, mockCtx)
       expect(result).toBe('  rack(mod = 2, teeth = 10, thickness = 5);\n')
     })
@@ -791,7 +811,7 @@ describe('BOSL2 Codegen Handlers', () => {
     })
 
     it('worm_gear – default', () => {
-      const node = mockNode('bosl2_worm_gear', { mod: 2, teeth: 30, worm_diam: 20, worm_starts: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const node = mockNode('bosl2_worm_gear', { mod: 2, teeth: 30, worm_diam: 20, worm_starts: 1, thickness: 0, anchor: 'CENTER', spin: 0, orient: 'UP' })
       const result = mechanicalCodegen.bosl2_worm_gear(node, mockCtx)
       expect(result).toBe('  worm_gear(mod = 2, teeth = 30, worm_diam = 20);\n')
     })
@@ -863,19 +883,19 @@ describe('BOSL2 Codegen Handlers', () => {
     })
 
     it('bottle_neck – default', () => {
-      const node = mockNode('bosl2_bottle_neck', { wall: 2, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const node = mockNode('bosl2_bottle_neck', { wall: 2, neck_d: 0, thread_pitch: 0, anchor: 'CENTER', spin: 0, orient: 'UP' })
       const result = mechanicalCodegen.bosl2_bottle_neck(node, mockCtx)
       expect(result).toBe('  generic_bottle_neck(wall = 2);\n')
     })
 
     it('bottle_cap – default', () => {
-      const node = mockNode('bosl2_bottle_cap', { wall: 2, texture: 'pointed', anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const node = mockNode('bosl2_bottle_cap', { wall: 2, cap_d: 0, thread_pitch: 0, texture: 'pointed', anchor: 'CENTER', spin: 0, orient: 'UP' })
       const result = mechanicalCodegen.bosl2_bottle_cap(node, mockCtx)
       expect(result).toBe('  generic_bottle_cap(wall = 2, texture = "pointed");\n')
     })
 
     it('bottle_cap – no texture', () => {
-      const node = mockNode('bosl2_bottle_cap', { wall: 2, texture: '', anchor: 'CENTER', spin: 0, orient: 'UP' })
+      const node = mockNode('bosl2_bottle_cap', { wall: 2, cap_d: 0, thread_pitch: 0, texture: '', anchor: 'CENTER', spin: 0, orient: 'UP' })
       const result = mechanicalCodegen.bosl2_bottle_cap(node, mockCtx)
       expect(result).toBe('  generic_bottle_cap(wall = 2);\n')
     })

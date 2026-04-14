@@ -13,7 +13,7 @@ export interface Bosl2RoundedPrismData {
 }
 
 export interface Bosl2SkinData {
-  slices: Expr; method: string; style: string
+  shapes: string; slices: Expr; method: string; style: string
 }
 
 export interface Bosl2LinearSweepData {
@@ -56,4 +56,9 @@ export interface Bosl2ChamferEdgeMaskData {
 
 export interface Bosl2StrokeData {
   width: Expr; closed: boolean; endcaps: string
+}
+
+export interface Bosl2FilletData {
+  h: Expr; r: Expr; ang: Expr
+  anchor: string; spin: Expr; orient: string
 }

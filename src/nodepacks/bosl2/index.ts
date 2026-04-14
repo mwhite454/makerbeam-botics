@@ -148,7 +148,6 @@ export const bosl2Shapes3dPack: NodePackDefinition = {
     bosl2_octahedron: OctahedronNode,
     bosl2_regular_prism: RegularPrismNode,
     bosl2_text3d: Text3dNode,
-    bosl2_fillet: FilletNode,
   },
   paletteItems: SHAPES3D_PALETTE,
   codegenHandlers: shapes3dCodegen,
@@ -177,7 +176,6 @@ export const bosl2Shapes2dPack: NodePackDefinition = {
   },
   paletteItems: SHAPES2D_PALETTE,
   codegenHandlers: shapes2dCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2TransformsPack: NodePackDefinition = {
@@ -208,7 +206,6 @@ export const bosl2TransformsPack: NodePackDefinition = {
   },
   paletteItems: TRANSFORMS_PALETTE,
   codegenHandlers: transformsCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2DistributorsPack: NodePackDefinition = {
@@ -229,7 +226,6 @@ export const bosl2DistributorsPack: NodePackDefinition = {
   },
   paletteItems: DISTRIBUTORS_PALETTE,
   codegenHandlers: distributorsCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2RoundingPack: NodePackDefinition = {
@@ -251,10 +247,10 @@ export const bosl2RoundingPack: NodePackDefinition = {
     bosl2_rounding_edge_mask: RoundingEdgeMaskNode,
     bosl2_chamfer_edge_mask: ChamferEdgeMaskNode,
     bosl2_stroke: StrokeNode,
+    bosl2_fillet: FilletNode,
   },
   paletteItems: ROUNDING_PALETTE,
   codegenHandlers: roundingCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2MechanicalPack: NodePackDefinition = {
@@ -282,7 +278,6 @@ export const bosl2MechanicalPack: NodePackDefinition = {
   },
   paletteItems: MECHANICAL_PALETTE,
   codegenHandlers: mechanicalCodegen,
-  preamble: bosl2Preamble,
 }
 
 export const bosl2AttachmentsPack: NodePackDefinition = {
@@ -303,5 +298,4 @@ export const bosl2AttachmentsPack: NodePackDefinition = {
   },
   paletteItems: ATTACHMENTS_PALETTE,
   codegenHandlers: attachmentsCodegen,
-  preamble: bosl2Preamble,
 }

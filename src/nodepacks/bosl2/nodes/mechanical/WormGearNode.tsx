@@ -12,6 +12,7 @@ export function WormGearNode({ id, data, selected }: NodeProps) {
       <ExpressionInput label="teeth" value={d.teeth} step={1} onChange={(v) => update(id, { teeth: v })} />
       <ExpressionInput label="worm_diam" value={d.worm_diam} step={1} onChange={(v) => update(id, { worm_diam: v })} />
       <ExpressionInput label="worm_starts" value={d.worm_starts} step={1} onChange={(v) => update(id, { worm_starts: v })} />
+      <ExpressionInput label="thickness" value={d.thickness} step={1} onChange={(v) => update(id, { thickness: v })} />
     </BaseNode>
   )
 }

@@ -1,18 +1,8 @@
 import type { Node } from '@xyflow/react'
 import type { CodegenContext } from '@/types/nodePack'
+import { optAnchor } from './utils'
 
 // ─── Tier 5: Mechanical Parts codegen handlers ──────────────────────────────
-
-function optAnchor(ctx: CodegenContext, d: Record<string, unknown>): string {
-  let extra = ''
-  const anchor = String(d.anchor ?? 'CENTER')
-  if (anchor && anchor !== 'CENTER') extra += `, anchor = ${anchor}`
-  const spin = ctx.expr(d.spin)
-  if (spin !== '0') extra += `, spin = ${spin}`
-  const orient = String(d.orient ?? 'UP')
-  if (orient && orient !== 'UP') extra += `, orient = ${orient}`
-  return extra
-}
 
 export const mechanicalCodegen: Record<string, (node: Node, ctx: CodegenContext) => string> = {
   bosl2_spur_gear: (node, ctx) => {
@@ -28,6 +18,7 @@ export const mechanicalCodegen: Record<string, (node: Node, ctx: CodegenContext)
   bosl2_rack: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     let params = `mod = ${ctx.expr(d.mod)}, teeth = ${ctx.expr(d.teeth)}, thickness = ${ctx.expr(d.thickness)}`
+    const h = ctx.expr(d.height); if (h !== '0') params += `, height = ${h}`
     const pa = ctx.expr(d.pressure_angle); if (pa !== '20') params += `, pressure_angle = ${pa}`
     const hel = ctx.expr(d.helical); if (hel !== '0') params += `, helical = ${hel}`
     params += optAnchor(ctx, d)
@@ -55,6 +46,7 @@ export const mechanicalCodegen: Record<string, (node: Node, ctx: CodegenContext)
     const d = node.data as Record<string, unknown>
     let params = `mod = ${ctx.expr(d.mod)}, teeth = ${ctx.expr(d.teeth)}, worm_diam = ${ctx.expr(d.worm_diam)}`
     const ws = ctx.expr(d.worm_starts); if (ws !== '1') params += `, worm_starts = ${ws}`
+    const th = ctx.expr(d.thickness); if (th !== '0') params += `, thickness = ${th}`
     params += optAnchor(ctx, d)
     return `${ctx.pad}worm_gear(${params});\n`
   },
@@ -134,6 +126,8 @@ export const mechanicalCodegen: Record<string, (node: Node, ctx: CodegenContext)
   bosl2_bottle_neck: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     let params = `wall = ${ctx.expr(d.wall)}`
+    const nd = ctx.expr(d.neck_d); if (nd !== '0') params += `, neck_d = ${nd}`
+    const tp = ctx.expr(d.thread_pitch); if (tp !== '0') params += `, thread_pitch = ${tp}`
     params += optAnchor(ctx, d)
     return `${ctx.pad}generic_bottle_neck(${params});\n`
   },
@@ -141,6 +135,8 @@ export const mechanicalCodegen: Record<string, (node: Node, ctx: CodegenContext)
   bosl2_bottle_cap: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     let params = `wall = ${ctx.expr(d.wall)}`
+    const cd = ctx.expr(d.cap_d); if (cd !== '0') params += `, cap_d = ${cd}`
+    const tp = ctx.expr(d.thread_pitch); if (tp !== '0') params += `, thread_pitch = ${tp}`
     const tex = String(d.texture ?? ''); if (tex) params += `, texture = "${ctx.escapeString(tex)}"`
     params += optAnchor(ctx, d)
     return `${ctx.pad}generic_bottle_cap(${params});\n`

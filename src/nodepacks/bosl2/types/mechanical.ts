@@ -9,7 +9,7 @@ export interface Bosl2SpurGearData {
 }
 
 export interface Bosl2RackData {
-  mod: Expr; teeth: Expr; thickness: Expr
+  mod: Expr; teeth: Expr; thickness: Expr; height: Expr
   pressure_angle: Expr; helical: Expr
   anchor: string; spin: Expr; orient: string
 }
@@ -26,7 +26,7 @@ export interface Bosl2WormData {
 }
 
 export interface Bosl2WormGearData {
-  mod: Expr; teeth: Expr; worm_diam: Expr; worm_starts: Expr
+  mod: Expr; teeth: Expr; worm_diam: Expr; worm_starts: Expr; thickness: Expr
   anchor: string; spin: Expr; orient: string
 }
 
@@ -74,11 +74,11 @@ export interface Bosl2KnuckleHingeData {
 }
 
 export interface Bosl2BottleNeckData {
-  wall: Expr
+  wall: Expr; neck_d: Expr; thread_pitch: Expr
   anchor: string; spin: Expr; orient: string
 }
 
 export interface Bosl2BottleCapData {
-  wall: Expr; texture: string
+  wall: Expr; cap_d: Expr; thread_pitch: Expr; texture: string
   anchor: string; spin: Expr; orient: string
 }

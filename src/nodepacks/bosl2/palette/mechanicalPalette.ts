@@ -9,9 +9,9 @@ export const MECHANICAL_PALETTE: PaletteItem[] = [
   },
   {
     type: 'bosl2_rack', label: 'rack', category: 'bosl2_mechanical',
-    defaultData: { mod: 2, teeth: 10, thickness: 5, pressure_angle: 20, helical: 0, anchor: 'CENTER', spin: 0, orient: 'UP' },
+    defaultData: { mod: 2, teeth: 10, thickness: 5, height: 0, pressure_angle: 20, helical: 0, anchor: 'CENTER', spin: 0, orient: 'UP' },
     description: 'BOSL2 gear rack (linear gear).',
-    inputs: 'mod — module; teeth; thickness; pressure_angle; helical',
+    inputs: 'mod — module; teeth; thickness; height — rack body height; pressure_angle; helical',
   },
   {
     type: 'bosl2_bevel_gear', label: 'bevel_gear', category: 'bosl2_mechanical',
@@ -27,9 +27,9 @@ export const MECHANICAL_PALETTE: PaletteItem[] = [
   },
   {
     type: 'bosl2_worm_gear', label: 'worm_gear', category: 'bosl2_mechanical',
-    defaultData: { mod: 2, teeth: 30, worm_diam: 20, worm_starts: 1, anchor: 'CENTER', spin: 0, orient: 'UP' },
+    defaultData: { mod: 2, teeth: 30, worm_diam: 20, worm_starts: 1, thickness: 5, anchor: 'CENTER', spin: 0, orient: 'UP' },
     description: 'BOSL2 worm gear wheel.',
-    inputs: 'mod; teeth; worm_diam; worm_starts',
+    inputs: 'mod; teeth; worm_diam; worm_starts; thickness',
   },
   {
     type: 'bosl2_threaded_rod', label: 'threaded_rod', category: 'bosl2_mechanical',
@@ -81,14 +81,14 @@ export const MECHANICAL_PALETTE: PaletteItem[] = [
   },
   {
     type: 'bosl2_bottle_neck', label: 'bottle_neck', category: 'bosl2_mechanical',
-    defaultData: { wall: 2, anchor: 'CENTER', spin: 0, orient: 'UP' },
+    defaultData: { wall: 2, neck_d: 0, thread_pitch: 0, anchor: 'CENTER', spin: 0, orient: 'UP' },
     description: 'BOSL2 generic bottle neck threading.',
-    inputs: 'wall — wall thickness',
+    inputs: 'wall — wall thickness; neck_d — neck diameter; thread_pitch — thread pitch',
   },
   {
     type: 'bosl2_bottle_cap', label: 'bottle_cap', category: 'bosl2_mechanical',
-    defaultData: { wall: 2, texture: 'pointed', anchor: 'CENTER', spin: 0, orient: 'UP' },
+    defaultData: { wall: 2, cap_d: 0, thread_pitch: 0, texture: 'pointed', anchor: 'CENTER', spin: 0, orient: 'UP' },
     description: 'BOSL2 generic bottle cap.',
-    inputs: 'wall — thickness; texture — grip pattern',
+    inputs: 'wall — thickness; cap_d — cap diameter; thread_pitch — thread pitch; texture — grip pattern',
   },
 ]
