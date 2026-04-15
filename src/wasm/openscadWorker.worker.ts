@@ -6,6 +6,7 @@
 
 import { createOpenSCAD } from 'openscad-wasm'
 import type { OpenSCAD } from 'openscad-wasm'
+import { mountBosl2, sourceNeedsBosl2 } from './bosl2Loader'
 
 export type RenderFormat = 'stl' | 'png' | 'off'
 
@@ -95,6 +96,25 @@ async function runRender(id: string, code: string, format: RenderFormat, files?:
       raw.FS.writeFile(`/${file.name}`, new Uint8Array(file.data))
     }
 
+    // Mount BOSL2 library files if the source includes any BOSL2 headers.
+    // openscad-wasm doesn't bundle BOSL2, so we vendor it under
+    // public/libraries/BOSL2/ and write it into the WASM FS at /libraries/BOSL2/.
+    if (sourceNeedsBosl2(code)) {
+      try {
+        await mountBosl2(raw.FS)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        const msg: WorkerResponse = {
+          type: 'error',
+          id,
+          message: `Failed to load BOSL2 library: ${message}`,
+          logs: '',
+        }
+        self.postMessage(msg)
+        return
+      }
+    }
+
     const args: string[] = [inputPath, '-o', outputPath]
     if (format === 'off') {
       args.push('--export-format=off')
@@ -106,7 +126,12 @@ async function runRender(id: string, code: string, format: RenderFormat, files?:
 
     const allLogs = [...stdout, ...stderr].join('\n')
 
-    const hasError = stderr.some((line) => /\berror\b|\bfatal\b/i.test(line))
+    // Treat missing includes and unknown modules/functions as errors — OpenSCAD
+    // emits these as WARNING-level messages and then produces an empty output,
+    // so without this check the failure looks like a silent empty render.
+    const hasError = stderr.some((line) =>
+      /\berror\b|\bfatal\b|Can't open include file|Ignoring unknown (module|function)/i.test(line)
+    )
 
     if (exitCode !== 0 || hasError) {
       const errorLines = stderr.filter((line) =>
