@@ -1,25 +1,8 @@
 import type { Node } from '@xyflow/react'
 import type { CodegenContext } from '@/types/nodePack'
+import { optAnchor } from './utils'
 
 // ─── Tier 1: 3D Shape codegen handlers ───────────────────────────────────────
-
-function optParam(ctx: CodegenContext, name: string, val: unknown, dflt?: string): string {
-  const v = ctx.expr(val)
-  if (v === '0' && dflt === undefined) return ''
-  if (dflt !== undefined && v === dflt) return ''
-  return `, ${name} = ${v}`
-}
-
-function optAnchor(ctx: CodegenContext, d: Record<string, unknown>): string {
-  let extra = ''
-  const anchor = String(d.anchor ?? 'CENTER')
-  if (anchor && anchor !== 'CENTER') extra += `, anchor = ${anchor}`
-  const spin = ctx.expr(d.spin)
-  if (spin !== '0') extra += `, spin = ${spin}`
-  const orient = String(d.orient ?? 'UP')
-  if (orient && orient !== 'UP') extra += `, orient = ${orient}`
-  return extra
-}
 
 export const shapes3dCodegen: Record<string, (node: Node, ctx: CodegenContext) => string> = {
   bosl2_cuboid: (node, ctx) => {
@@ -158,13 +141,5 @@ export const shapes3dCodegen: Record<string, (node: Node, ctx: CodegenContext) =
     if (font) params += `, font = "${ctx.escapeString(font)}"`
     params += optAnchor(ctx, d)
     return `${ctx.pad}text3d(${params});\n`
-  },
-
-  bosl2_fillet: (node, ctx) => {
-    const d = node.data as Record<string, unknown>
-    let params = `h = ${ctx.expr(d.h)}, r = ${ctx.expr(d.r)}`
-    const ang = ctx.expr(d.ang); if (ang !== '90') params += `, ang = ${ang}`
-    params += optAnchor(ctx, d)
-    return `${ctx.pad}fillet(${params});\n`
   },
 }

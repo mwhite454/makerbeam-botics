@@ -15,9 +15,9 @@ export const ROUNDING_PALETTE: PaletteItem[] = [
   },
   {
     type: 'bosl2_skin', label: 'skin', category: 'bosl2_rounding',
-    defaultData: { slices: 10, method: 'reindex', style: 'min_edge' },
-    description: 'BOSL2 skin() — create a solid between a list of profiles.',
-    inputs: 'slices; method — vertex matching; style — triangulation',
+    defaultData: { shapes: '[]', slices: 10, method: 'reindex', style: 'min_edge' },
+    description: 'BOSL2 skin() — create a solid between a list of profiles (shapes expression).',
+    inputs: 'shapes — list of profiles; slices; method — vertex matching; style — triangulation',
   },
   {
     type: 'bosl2_linear_sweep', label: 'linear_sweep', category: 'bosl2_rounding',
@@ -72,5 +72,11 @@ export const ROUNDING_PALETTE: PaletteItem[] = [
     defaultData: { width: 1, closed: false, endcaps: 'butt' },
     description: 'BOSL2 stroke() — draw a path as a 3D stroke with width.',
     inputs: 'width; closed; endcaps — end cap style',
+  },
+  {
+    type: 'bosl2_fillet', label: 'fillet', category: 'bosl2_rounding',
+    defaultData: { h: 10, r: 3, ang: 90, anchor: 'CENTER', spin: 0, orient: 'UP' },
+    description: 'BOSL2 fillet() — concave rounding mask for edges (use inside diff/attach).',
+    inputs: 'h — height; r — fillet radius; ang — angle',
   },
 ]

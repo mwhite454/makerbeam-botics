@@ -1,16 +1,8 @@
 import type { Node } from '@xyflow/react'
 import type { CodegenContext } from '@/types/nodePack'
+import { optAnchor2d } from './utils'
 
 // ─── Tier 2: 2D Shape codegen handlers ───────────────────────────────────────
-
-function optAnchor2d(ctx: CodegenContext, d: Record<string, unknown>): string {
-  let extra = ''
-  const anchor = String(d.anchor ?? 'CENTER')
-  if (anchor && anchor !== 'CENTER') extra += `, anchor = ${anchor}`
-  const spin = ctx.expr(d.spin)
-  if (spin !== '0') extra += `, spin = ${spin}`
-  return extra
-}
 
 export const shapes2dCodegen: Record<string, (node: Node, ctx: CodegenContext) => string> = {
   bosl2_rect: (node, ctx) => {
@@ -91,7 +83,7 @@ export const shapes2dCodegen: Record<string, (node: Node, ctx: CodegenContext) =
 
   bosl2_squircle: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    let params = `[${ctx.expr(d.x)}, ${ctx.expr(d.y)}]`
+    let params = `size = [${ctx.expr(d.x)}, ${ctx.expr(d.y)}]`
     const sq = ctx.expr(d.squareness); if (sq !== '0.5') params += `, squareness = ${sq}`
     params += optAnchor2d(ctx, d)
     return `${ctx.pad}squircle(${params});\n`

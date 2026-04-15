@@ -126,10 +126,6 @@ import { MECHANICAL_PALETTE } from './palette/mechanicalPalette'
 import { ATTACHMENTS_PALETTE } from './palette/attachmentsPalette'
 
 // ─── Pack definitions (Option A: one pack per sub-category) ──────────────────
-// NOTE: preamble is assigned to bosl2Shapes3dPack ONLY.
-// The codegen pipeline calls pack.preamble(nodes) for every registered pack, so
-// assigning bosl2Preamble to all 7 packs would emit the includes 7× in the
-// generated output. One pack owns the preamble; the others omit the field.
 
 export const bosl2Shapes3dPack: NodePackDefinition = {
   id: 'bosl2_shapes3d',
@@ -152,7 +148,6 @@ export const bosl2Shapes3dPack: NodePackDefinition = {
     bosl2_octahedron: OctahedronNode,
     bosl2_regular_prism: RegularPrismNode,
     bosl2_text3d: Text3dNode,
-    bosl2_fillet: FilletNode,
   },
   paletteItems: SHAPES3D_PALETTE,
   codegenHandlers: shapes3dCodegen,
@@ -252,6 +247,7 @@ export const bosl2RoundingPack: NodePackDefinition = {
     bosl2_rounding_edge_mask: RoundingEdgeMaskNode,
     bosl2_chamfer_edge_mask: ChamferEdgeMaskNode,
     bosl2_stroke: StrokeNode,
+    bosl2_fillet: FilletNode,
   },
   paletteItems: ROUNDING_PALETTE,
   codegenHandlers: roundingCodegen,

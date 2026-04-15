@@ -1,18 +1,8 @@
 import type { Node } from '@xyflow/react'
 import type { CodegenContext } from '@/types/nodePack'
+import { anchorParams3d, optAnchor } from './utils'
 
 // ─── Tier 4: Rounding, Masks, Sweeps codegen handlers ───────────────────────
-
-function optAnchor(ctx: CodegenContext, d: Record<string, unknown>): string {
-  let extra = ''
-  const anchor = String(d.anchor ?? 'CENTER')
-  if (anchor && anchor !== 'CENTER') extra += `, anchor = ${anchor}`
-  const spin = ctx.expr(d.spin)
-  if (spin !== '0') extra += `, spin = ${spin}`
-  const orient = String(d.orient ?? 'UP')
-  if (orient && orient !== 'UP') extra += `, orient = ${orient}`
-  return extra
-}
 
 export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) => string> = {
   bosl2_offset_sweep: (node, ctx) => {
@@ -36,12 +26,14 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
 
   bosl2_skin: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    let params = `slices = ${ctx.expr(d.slices)}`
+    const shapes = String(d.shapes ?? '[]')
+    const parts: string[] = [shapes]
+    const sl = ctx.expr(d.slices); if (sl !== '0' && sl !== '10') parts.push(`slices = ${sl}`)
     const method = String(d.method ?? 'reindex')
-    if (method !== 'reindex') params += `, method = "${method}"`
+    if (method !== 'reindex') parts.push(`method = "${method}"`)
     const style = String(d.style ?? 'min_edge')
-    if (style !== 'min_edge') params += `, style = "${style}"`
-    return ctx.emitTransform(`skin(${params})`)
+    if (style !== 'min_edge') parts.push(`style = "${style}"`)
+    return `${ctx.pad}skin(${parts.join(', ')});\n`
   },
 
   bosl2_linear_sweep: (node, ctx) => {
@@ -57,21 +49,21 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
 
   bosl2_rotate_sweep: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    let params = ``
-    const ang = ctx.expr(d.angle); if (ang !== '360') params += `angle = ${ang}`
-    params += optAnchor(ctx, d)
-    return ctx.emitTransform(`rotate_sweep(${params || ''})`)
+    const parts: string[] = []
+    const ang = ctx.expr(d.angle); if (ang !== '360') parts.push(`angle = ${ang}`)
+    parts.push(...anchorParams3d(ctx, d))
+    return ctx.emitTransform(`rotate_sweep(${parts.join(', ')})`)
   },
 
   bosl2_path_sweep: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    let params = ``
+    const parts: string[] = []
     const method = String(d.method ?? 'incremental')
-    if (method !== 'incremental') params += `method = "${method}"`
-    const tw = ctx.expr(d.twist); if (tw !== '0') { if (params) params += ', '; params += `twist = ${tw}` }
-    if (d.closed) { if (params) params += ', '; params += `closed = true` }
-    params += optAnchor(ctx, d)
-    return ctx.emitTransform(`path_sweep(${params})`)
+    if (method !== 'incremental') parts.push(`method = "${method}"`)
+    const tw = ctx.expr(d.twist); if (tw !== '0') parts.push(`twist = ${tw}`)
+    if (d.closed) parts.push(`closed = true`)
+    parts.push(...anchorParams3d(ctx, d))
+    return ctx.emitTransform(`path_sweep(${parts.join(', ')})`)
   },
 
   bosl2_spiral_sweep: (node, ctx) => {
@@ -118,5 +110,13 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
     const ec = String(d.endcaps ?? '')
     if (ec && ec !== 'butt') params += `, endcaps = "${ec}"`
     return ctx.emitTransform(`stroke(${params})`)
+  },
+
+  bosl2_fillet: (node, ctx) => {
+    const d = node.data as Record<string, unknown>
+    let params = `h = ${ctx.expr(d.h)}, r = ${ctx.expr(d.r)}`
+    const ang = ctx.expr(d.ang); if (ang !== '90') params += `, ang = ${ang}`
+    params += optAnchor(ctx, d)
+    return `${ctx.pad}fillet(${params});\n`
   },
 }

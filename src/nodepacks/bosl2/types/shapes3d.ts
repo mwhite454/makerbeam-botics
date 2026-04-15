@@ -82,8 +82,3 @@ export interface Bosl2Text3dData {
   text: string; h: Expr; size: Expr; font: string
   anchor: string; spin: Expr; orient: string
 }
-
-export interface Bosl2FilletData {
-  h: Expr; r: Expr; ang: Expr
-  anchor: string; spin: Expr; orient: string
-}

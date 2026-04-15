@@ -85,10 +85,4 @@ export const SHAPES3D_PALETTE: PaletteItem[] = [
     description: 'BOSL2 3D extruded text.',
     inputs: 'text — string; h — extrusion height; size — font size; font — font name',
   },
-  {
-    type: 'bosl2_fillet', label: 'fillet', category: 'bosl2_shapes3d',
-    defaultData: { h: 10, r: 3, ang: 90, anchor: 'CENTER', spin: 0, orient: 'UP' },
-    description: 'BOSL2 fillet (concave rounding) mask for edges.',
-    inputs: 'h — height; r — fillet radius; ang — angle',
-  },
 ]
