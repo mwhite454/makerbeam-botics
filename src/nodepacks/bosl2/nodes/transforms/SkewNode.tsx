@@ -7,7 +7,16 @@ export function SkewNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2SkewData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_transforms" label="skew" selected={selected}>
+    <BaseNode id={id} category="bosl2_transforms" label="skew" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'child' },
+        { id: 'in-1', label: 'sxy' },
+        { id: 'in-2', label: 'sxz' },
+        { id: 'in-3', label: 'syx' },
+        { id: 'in-4', label: 'syz' },
+        { id: 'in-5', label: 'szx' },
+        { id: 'in-6', label: 'szy' },
+      ]}>
       <ExpressionInput label="sxy" value={d.sxy} step={0.1} onChange={(v) => update(id, { sxy: v })} />
       <ExpressionInput label="sxz" value={d.sxz} step={0.1} onChange={(v) => update(id, { sxz: v })} />
       <ExpressionInput label="syx" value={d.syx} step={0.1} onChange={(v) => update(id, { syx: v })} />

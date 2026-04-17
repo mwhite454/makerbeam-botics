@@ -7,7 +7,8 @@ export function YrotNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2AxisRotData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_transforms" label="yrot" selected={selected}>
+    <BaseNode id={id} category="bosl2_transforms" label="yrot" selected={selected}
+      inputHandles={[{ id: 'in-0', label: 'child' }, { id: 'in-1', label: 'a' }]}>
       <ExpressionInput label="a" value={d.a} step={1} onChange={(v) => update(id, { a: v })} />
     </BaseNode>
   )
