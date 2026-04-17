@@ -39,7 +39,7 @@ export const transformsCodegen: Record<string, (node: Node, ctx: CodegenContext)
 
   bosl2_rot: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const a  = ctx.resolveValueInput(1, ctx.expr(d.a))
+    const a = ctx.resolveValueInput(1, ctx.expr(d.a))
     const vx = ctx.resolveValueInput(2, ctx.expr(d.vx))
     const vy = ctx.resolveValueInput(3, ctx.expr(d.vy))
     const vz = ctx.resolveValueInput(4, ctx.expr(d.vz))
