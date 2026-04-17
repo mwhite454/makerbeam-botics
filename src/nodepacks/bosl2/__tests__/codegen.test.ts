@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type { Node } from '@xyflow/react'
 import type { CodegenContext } from '@/types/nodePack'
 
@@ -505,6 +505,45 @@ describe('BOSL2 Codegen Handlers', () => {
       const node = mockNode('bosl2_skew', { sxy: 0.5, sxz: 0, syx: 0, syz: 0.3, szx: 0, szy: 0 })
       const result = transformsCodegen.bosl2_skew(node, mockCtx)
       expect(result).toContain('skew(sxy = 0.5, syz = 0.3)')
+    })
+
+    // ─── resolveValueInput index assertions ─────────────────────────────────────
+
+    it('move – resolveValueInput called with correct indices (1=x, 2=y, 3=z)', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_move', { x: 10, y: 20, z: 30 })
+      transformsCodegen.bosl2_move(node, ctx)
+      expect(spy).toHaveBeenCalledWith(1, '10')
+      expect(spy).toHaveBeenCalledWith(2, '20')
+      expect(spy).toHaveBeenCalledWith(3, '30')
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    it('rot – resolveValueInput called with correct indices (1=a, 2=vx, 3=vy, 4=vz)', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_rot', { a: 45, vx: 1, vy: 0, vz: 0 })
+      transformsCodegen.bosl2_rot(node, ctx)
+      expect(spy).toHaveBeenCalledWith(1, '45')
+      expect(spy).toHaveBeenCalledWith(2, '1')
+      expect(spy).toHaveBeenCalledWith(3, '0')
+      expect(spy).toHaveBeenCalledWith(4, '0')
+      expect(spy).toHaveBeenCalledTimes(4)
+    })
+
+    it('skew – resolveValueInput called with correct indices (1=sxy … 6=szy)', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_skew', { sxy: 0.1, sxz: 0.2, syx: 0.3, syz: 0.4, szx: 0.5, szy: 0.6 })
+      transformsCodegen.bosl2_skew(node, ctx)
+      expect(spy).toHaveBeenCalledWith(1, '0.1')
+      expect(spy).toHaveBeenCalledWith(2, '0.2')
+      expect(spy).toHaveBeenCalledWith(3, '0.3')
+      expect(spy).toHaveBeenCalledWith(4, '0.4')
+      expect(spy).toHaveBeenCalledWith(5, '0.5')
+      expect(spy).toHaveBeenCalledWith(6, '0.6')
+      expect(spy).toHaveBeenCalledTimes(6)
     })
   })
 
