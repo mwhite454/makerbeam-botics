@@ -1787,26 +1787,26 @@ describe("BOSL2 Codegen Handlers", () => {
   // ─── resolveValueInput index assertions for rounding/sweeps ─────────────────
 
   describe('rounding/sweeps – resolveValueInput index assertions', () => {
-    it('offset_sweep – indices 0=height, 1=top_r, 2=bot_r', () => {
+    it('offset_sweep – in-0=child, in-1=height, in-2=top_r, in-3=bot_r', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_offset_sweep', { height: 10, top_r: 1, bot_r: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
       roundingCodegen.bosl2_offset_sweep(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '10')
-      expect(spy).toHaveBeenCalledWith(1, '1')
+      expect(spy).toHaveBeenCalledWith(1, '10')
       expect(spy).toHaveBeenCalledWith(2, '1')
+      expect(spy).toHaveBeenCalledWith(3, '1')
       expect(spy).toHaveBeenCalledTimes(3)
     })
 
-    it('rounded_prism – indices 0=height, 1=joint_top, 2=joint_bot, 3=joint_sides', () => {
+    it('rounded_prism – in-0=child, in-1=height, in-2=joint_top, in-3=joint_bot, in-4=joint_sides', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_rounded_prism', { height: 10, joint_top: 1, joint_bot: 1, joint_sides: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
       roundingCodegen.bosl2_rounded_prism(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '10')
-      expect(spy).toHaveBeenCalledWith(1, '1')
+      expect(spy).toHaveBeenCalledWith(1, '10')
       expect(spy).toHaveBeenCalledWith(2, '1')
       expect(spy).toHaveBeenCalledWith(3, '1')
+      expect(spy).toHaveBeenCalledWith(4, '1')
       expect(spy).toHaveBeenCalledTimes(4)
     })
 
@@ -1819,44 +1819,44 @@ describe("BOSL2 Codegen Handlers", () => {
       expect(spy).toHaveBeenCalledTimes(1)
     })
 
-    it('linear_sweep – indices 0=height, 1=twist, 2=scale, 3=slices', () => {
+    it('linear_sweep – in-0=child, in-1=height, in-2=twist, in-3=scale, in-4=slices', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_linear_sweep', { height: 20, twist: 90, scale: 0.5, slices: 40, center: true, anchor: 'CENTER', spin: 0, orient: 'UP' })
       roundingCodegen.bosl2_linear_sweep(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '20')
-      expect(spy).toHaveBeenCalledWith(1, '90')
-      expect(spy).toHaveBeenCalledWith(2, '0.5')
-      expect(spy).toHaveBeenCalledWith(3, '40')
+      expect(spy).toHaveBeenCalledWith(1, '20')
+      expect(spy).toHaveBeenCalledWith(2, '90')
+      expect(spy).toHaveBeenCalledWith(3, '0.5')
+      expect(spy).toHaveBeenCalledWith(4, '40')
       expect(spy).toHaveBeenCalledTimes(4)
     })
 
-    it('rotate_sweep – index 0=angle', () => {
+    it('rotate_sweep – in-0=child, in-1=angle', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_rotate_sweep', { angle: 180, anchor: 'CENTER', spin: 0, orient: 'UP' })
       roundingCodegen.bosl2_rotate_sweep(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '180')
+      expect(spy).toHaveBeenCalledWith(1, '180')
       expect(spy).toHaveBeenCalledTimes(1)
     })
 
-    it('path_sweep – index 0=twist', () => {
+    it('path_sweep – in-0=child, in-1=twist', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_path_sweep', { method: 'incremental', twist: 180, closed: false, anchor: 'CENTER', spin: 0, orient: 'UP' })
       roundingCodegen.bosl2_path_sweep(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '180')
+      expect(spy).toHaveBeenCalledWith(1, '180')
       expect(spy).toHaveBeenCalledTimes(1)
     })
 
-    it('spiral_sweep – indices 0=h, 1=r, 2=turns', () => {
+    it('spiral_sweep – in-0=child, in-1=h, in-2=r, in-3=turns', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_spiral_sweep', { h: 20, r: 10, turns: 3, anchor: 'CENTER', spin: 0, orient: 'UP' })
       roundingCodegen.bosl2_spiral_sweep(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '20')
-      expect(spy).toHaveBeenCalledWith(1, '10')
-      expect(spy).toHaveBeenCalledWith(2, '3')
+      expect(spy).toHaveBeenCalledWith(1, '20')
+      expect(spy).toHaveBeenCalledWith(2, '10')
+      expect(spy).toHaveBeenCalledWith(3, '3')
       expect(spy).toHaveBeenCalledTimes(3)
     })
 
@@ -1880,12 +1880,12 @@ describe("BOSL2 Codegen Handlers", () => {
       expect(spy).toHaveBeenCalledTimes(2)
     })
 
-    it('stroke – index 0=width', () => {
+    it('stroke – in-0=child, in-1=width', () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback)
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
       const node = mockNode('bosl2_stroke', { width: 2, closed: false, endcaps: 'butt' })
       roundingCodegen.bosl2_stroke(node, ctx)
-      expect(spy).toHaveBeenCalledWith(0, '2')
+      expect(spy).toHaveBeenCalledWith(1, '2')
       expect(spy).toHaveBeenCalledTimes(1)
     })
 

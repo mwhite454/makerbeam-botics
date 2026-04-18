@@ -7,21 +7,21 @@ import { anchorParams3d, optAnchor } from './utils'
 export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) => string> = {
   bosl2_offset_sweep: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const heightE = ctx.resolveValueInput(0, ctx.expr(d.height))
+    const heightE = ctx.resolveValueInput(1, ctx.expr(d.height))
     let params = `height = ${heightE}`
-    const top = ctx.resolveValueInput(1, ctx.expr(d.top_r)); if (top !== '0') params += `, top = os_circle(r = ${top})`
-    const bot = ctx.resolveValueInput(2, ctx.expr(d.bot_r)); if (bot !== '0') params += `, bottom = os_circle(r = ${bot})`
+    const top = ctx.resolveValueInput(2, ctx.expr(d.top_r)); if (top !== '0') params += `, top = os_circle(r = ${top})`
+    const bot = ctx.resolveValueInput(3, ctx.expr(d.bot_r)); if (bot !== '0') params += `, bottom = os_circle(r = ${bot})`
     params += optAnchor(ctx, d)
     return ctx.emitTransform(`offset_sweep(${params})`)
   },
 
   bosl2_rounded_prism: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const heightE = ctx.resolveValueInput(0, ctx.expr(d.height))
+    const heightE = ctx.resolveValueInput(1, ctx.expr(d.height))
     let params = `height = ${heightE}`
-    const jt = ctx.resolveValueInput(1, ctx.expr(d.joint_top)); if (jt !== '0') params += `, joint_top = ${jt}`
-    const jb = ctx.resolveValueInput(2, ctx.expr(d.joint_bot)); if (jb !== '0') params += `, joint_bot = ${jb}`
-    const js = ctx.resolveValueInput(3, ctx.expr(d.joint_sides)); if (js !== '0') params += `, joint_sides = ${js}`
+    const jt = ctx.resolveValueInput(2, ctx.expr(d.joint_top)); if (jt !== '0') params += `, joint_top = ${jt}`
+    const jb = ctx.resolveValueInput(3, ctx.expr(d.joint_bot)); if (jb !== '0') params += `, joint_bot = ${jb}`
+    const js = ctx.resolveValueInput(4, ctx.expr(d.joint_sides)); if (js !== '0') params += `, joint_sides = ${js}`
     params += optAnchor(ctx, d)
     return ctx.emitTransform(`rounded_prism(${params})`)
   },
@@ -40,11 +40,11 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
 
   bosl2_linear_sweep: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const heightE = ctx.resolveValueInput(0, ctx.expr(d.height))
+    const heightE = ctx.resolveValueInput(1, ctx.expr(d.height))
     let params = `height = ${heightE}`
-    const tw = ctx.resolveValueInput(1, ctx.expr(d.twist)); if (tw !== '0') params += `, twist = ${tw}`
-    const sc = ctx.resolveValueInput(2, ctx.expr(d.scale)); if (sc !== '1') params += `, scale = ${sc}`
-    const sl = ctx.resolveValueInput(3, ctx.expr(d.slices)); if (sl !== '0') params += `, slices = ${sl}`
+    const tw = ctx.resolveValueInput(2, ctx.expr(d.twist)); if (tw !== '0') params += `, twist = ${tw}`
+    const sc = ctx.resolveValueInput(3, ctx.expr(d.scale)); if (sc !== '1') params += `, scale = ${sc}`
+    const sl = ctx.resolveValueInput(4, ctx.expr(d.slices)); if (sl !== '0') params += `, slices = ${sl}`
     if (d.center) params += `, center = true`
     params += optAnchor(ctx, d)
     return ctx.emitTransform(`linear_sweep(${params})`)
@@ -53,7 +53,7 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
   bosl2_rotate_sweep: (node, ctx) => {
     const d = node.data as Record<string, unknown>
     const parts: string[] = []
-    const ang = ctx.resolveValueInput(0, ctx.expr(d.angle)); if (ang !== '360') parts.push(`angle = ${ang}`)
+    const ang = ctx.resolveValueInput(1, ctx.expr(d.angle)); if (ang !== '360') parts.push(`angle = ${ang}`)
     parts.push(...anchorParams3d(ctx, d))
     return ctx.emitTransform(`rotate_sweep(${parts.join(', ')})`)
   },
@@ -63,7 +63,7 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
     const parts: string[] = []
     const method = String(d.method ?? 'incremental')
     if (method !== 'incremental') parts.push(`method = "${method}"`)
-    const tw = ctx.resolveValueInput(0, ctx.expr(d.twist)); if (tw !== '0') parts.push(`twist = ${tw}`)
+    const tw = ctx.resolveValueInput(1, ctx.expr(d.twist)); if (tw !== '0') parts.push(`twist = ${tw}`)
     if (d.closed) parts.push(`closed = true`)
     parts.push(...anchorParams3d(ctx, d))
     return ctx.emitTransform(`path_sweep(${parts.join(', ')})`)
@@ -71,9 +71,9 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
 
   bosl2_spiral_sweep: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const hE = ctx.resolveValueInput(0, ctx.expr(d.h))
-    const rE = ctx.resolveValueInput(1, ctx.expr(d.r))
-    const turnsE = ctx.resolveValueInput(2, ctx.expr(d.turns))
+    const hE = ctx.resolveValueInput(1, ctx.expr(d.h))
+    const rE = ctx.resolveValueInput(2, ctx.expr(d.r))
+    const turnsE = ctx.resolveValueInput(3, ctx.expr(d.turns))
     let params = `h = ${hE}, r = ${rE}, turns = ${turnsE}`
     params += optAnchor(ctx, d)
     return ctx.emitTransform(`spiral_sweep(${params})`)
@@ -115,7 +115,7 @@ export const roundingCodegen: Record<string, (node: Node, ctx: CodegenContext) =
 
   bosl2_stroke: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const widthE = ctx.resolveValueInput(0, ctx.expr(d.width))
+    const widthE = ctx.resolveValueInput(1, ctx.expr(d.width))
     let params = `width = ${widthE}`
     if (d.closed) params += `, closed = true`
     const ec = String(d.endcaps ?? '')
