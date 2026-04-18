@@ -26,7 +26,7 @@ export const shapes3dCodegen: Record<string, (node: Node, ctx: CodegenContext) =
     if (r1 !== r2) {
       params += `, r1 = ${r1}, r2 = ${r2}`
     } else {
-      params += `, r = ${r1}`
+      params += `, r = ${r}`
     }
     const ch = ctx.resolveValueInput(4, ctx.expr(d.chamfer)); if (ch !== '0') params += `, chamfer = ${ch}`
     const ro = ctx.resolveValueInput(5, ctx.expr(d.rounding)); if (ro !== '0') params += `, rounding = ${ro}`
