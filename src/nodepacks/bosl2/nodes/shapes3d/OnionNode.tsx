@@ -7,10 +7,16 @@ export function OnionNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2OnionData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_shapes3d" label="onion" selected={selected}>
-      <ExpressionInput label="r" value={d.r} step={1} onChange={(v) => update(id, { r: v })} />
-      <ExpressionInput label="ang" value={d.ang} step={5} onChange={(v) => update(id, { ang: v })} />
-      <ExpressionInput label="cap_h" value={d.cap_h} step={0.5} onChange={(v) => update(id, { cap_h: v })} />
+    <BaseNode id={id} category="bosl2_shapes3d" label="onion" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'r' },
+        { id: 'in-1', label: 'ang' },
+        { id: 'in-2', label: 'cap_h' },
+      ]}
+    >
+      <ExpressionInput label="r" value={d.r} step={1} nodeId={id} handleId="in-0" onChange={(v) => update(id, { r: v })} />
+      <ExpressionInput label="ang" value={d.ang} step={5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { ang: v })} />
+      <ExpressionInput label="cap_h" value={d.cap_h} step={0.5} nodeId={id} handleId="in-2" onChange={(v) => update(id, { cap_h: v })} />
     </BaseNode>
   )
 }
