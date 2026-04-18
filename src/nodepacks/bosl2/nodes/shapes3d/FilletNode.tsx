@@ -7,10 +7,16 @@ export function FilletNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2FilletData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_rounding" label="fillet" selected={selected}>
-      <ExpressionInput label="h" value={d.h} step={1} onChange={(v) => update(id, { h: v })} />
-      <ExpressionInput label="r" value={d.r} step={0.5} onChange={(v) => update(id, { r: v })} />
-      <ExpressionInput label="ang" value={d.ang} step={5} onChange={(v) => update(id, { ang: v })} />
+    <BaseNode id={id} category="bosl2_rounding" label="fillet" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'h' },
+        { id: 'in-1', label: 'r' },
+        { id: 'in-2', label: 'ang' },
+      ]}
+    >
+      <ExpressionInput label="h" value={d.h} step={1} nodeId={id} handleId="in-0" onChange={(v) => update(id, { h: v })} />
+      <ExpressionInput label="r" value={d.r} step={0.5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { r: v })} />
+      <ExpressionInput label="ang" value={d.ang} step={5} nodeId={id} handleId="in-2" onChange={(v) => update(id, { ang: v })} />
     </BaseNode>
   )
 }
