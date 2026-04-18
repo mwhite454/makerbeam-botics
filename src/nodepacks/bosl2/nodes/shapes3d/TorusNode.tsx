@@ -7,9 +7,14 @@ export function TorusNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2TorusData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_shapes3d" label="torus" selected={selected}>
-      <ExpressionInput label="r_maj" value={d.r_maj} step={1} onChange={(v) => update(id, { r_maj: v })} />
-      <ExpressionInput label="r_min" value={d.r_min} step={0.5} onChange={(v) => update(id, { r_min: v })} />
+    <BaseNode id={id} category="bosl2_shapes3d" label="torus" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'r_maj' },
+        { id: 'in-1', label: 'r_min' },
+      ]}
+    >
+      <ExpressionInput label="r_maj" value={d.r_maj} step={1} nodeId={id} handleId="in-0" onChange={(v) => update(id, { r_maj: v })} />
+      <ExpressionInput label="r_min" value={d.r_min} step={0.5} nodeId={id} handleId="in-1" onChange={(v) => update(id, { r_min: v })} />
     </BaseNode>
   )
 }

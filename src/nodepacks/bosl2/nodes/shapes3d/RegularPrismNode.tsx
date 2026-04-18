@@ -7,12 +7,20 @@ export function RegularPrismNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2RegularPrismData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_shapes3d" label="regular_prism" selected={selected}>
-      <ExpressionInput label="n" value={d.n} step={1} onChange={(v) => update(id, { n: v })} />
-      <ExpressionInput label="h" value={d.h} step={1} onChange={(v) => update(id, { h: v })} />
-      <ExpressionInput label="r" value={d.r} step={1} onChange={(v) => update(id, { r: v })} />
-      <ExpressionInput label="rounding" value={d.rounding} step={0.5} onChange={(v) => update(id, { rounding: v })} />
-      <ExpressionInput label="chamfer" value={d.chamfer} step={0.5} onChange={(v) => update(id, { chamfer: v })} />
+    <BaseNode id={id} category="bosl2_shapes3d" label="regular_prism" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'n' },
+        { id: 'in-1', label: 'h' },
+        { id: 'in-2', label: 'r' },
+        { id: 'in-3', label: 'rounding' },
+        { id: 'in-4', label: 'chamfer' },
+      ]}
+    >
+      <ExpressionInput label="n" value={d.n} step={1} nodeId={id} handleId="in-0" onChange={(v) => update(id, { n: v })} />
+      <ExpressionInput label="h" value={d.h} step={1} nodeId={id} handleId="in-1" onChange={(v) => update(id, { h: v })} />
+      <ExpressionInput label="r" value={d.r} step={1} nodeId={id} handleId="in-2" onChange={(v) => update(id, { r: v })} />
+      <ExpressionInput label="rounding" value={d.rounding} step={0.5} nodeId={id} handleId="in-3" onChange={(v) => update(id, { rounding: v })} />
+      <ExpressionInput label="chamfer" value={d.chamfer} step={0.5} nodeId={id} handleId="in-4" onChange={(v) => update(id, { chamfer: v })} />
     </BaseNode>
   )
 }

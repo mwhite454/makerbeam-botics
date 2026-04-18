@@ -7,8 +7,12 @@ export function OctahedronNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2OctahedronData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_shapes3d" label="octahedron" selected={selected}>
-      <ExpressionInput label="size" value={d.size} step={1} onChange={(v) => update(id, { size: v })} />
+    <BaseNode id={id} category="bosl2_shapes3d" label="octahedron" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'size' },
+      ]}
+    >
+      <ExpressionInput label="size" value={d.size} step={1} nodeId={id} handleId="in-0" onChange={(v) => update(id, { size: v })} />
     </BaseNode>
   )
 }
