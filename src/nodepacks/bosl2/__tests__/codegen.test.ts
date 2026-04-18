@@ -760,6 +760,179 @@ describe("BOSL2 Codegen Handlers", () => {
     });
   });
 
+  // ─── resolveValueInput index assertions for shapes3d ────────────────────────
+
+  describe('shapes3d – resolveValueInput index assertions', () => {
+    it('cuboid – indices 0=x, 1=y, 2=z, 3=rounding, 4=chamfer', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_cuboid', { x: 10, y: 20, z: 30, rounding: 2, chamfer: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_cuboid(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '20')
+      expect(spy).toHaveBeenCalledWith(2, '30')
+      expect(spy).toHaveBeenCalledWith(3, '2')
+      expect(spy).toHaveBeenCalledWith(4, '1')
+      expect(spy).toHaveBeenCalledTimes(5)
+    })
+
+    it('cyl – indices 0=h, 1=r, 2=r1, 3=r2, 4=chamfer, 5=rounding, 6=fn', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_cyl', { h: 10, r: 5, r1: 5, r2: 5, chamfer: 1, rounding: 2, circum: false, fn: 64, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_cyl(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '5')
+      expect(spy).toHaveBeenCalledWith(2, '5')
+      expect(spy).toHaveBeenCalledWith(3, '5')
+      expect(spy).toHaveBeenCalledWith(4, '1')
+      expect(spy).toHaveBeenCalledWith(5, '2')
+      expect(spy).toHaveBeenCalledWith(6, '64')
+      expect(spy).toHaveBeenCalledTimes(7)
+    })
+
+    it('spheroid – indices 0=r, 1=fn', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_spheroid', { r: 10, style: 'aligned', circum: false, fn: 64, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_spheroid(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '64')
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
+
+    it('torus – indices 0=r_maj, 1=r_min', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_torus', { r_maj: 20, r_min: 5, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_torus(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '20')
+      expect(spy).toHaveBeenCalledWith(1, '5')
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
+
+    it('tube – indices 0=h, 1=or, 2=ir, 3=wall', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_tube', { h: 20, or: 10, ir: 8, wall: 2, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_tube(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '20')
+      expect(spy).toHaveBeenCalledWith(1, '10')
+      expect(spy).toHaveBeenCalledWith(2, '8')
+      expect(spy).toHaveBeenCalledWith(3, '2')
+      expect(spy).toHaveBeenCalledTimes(4)
+    })
+
+    it('prismoid – indices 0..8', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_prismoid', { size1_x: 20, size1_y: 20, size2_x: 10, size2_y: 10, h: 15, shift_x: 5, shift_y: 3, rounding: 2, chamfer: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_prismoid(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '20')  // size1_x
+      expect(spy).toHaveBeenCalledWith(1, '20')  // size1_y
+      expect(spy).toHaveBeenCalledWith(2, '10')  // size2_x
+      expect(spy).toHaveBeenCalledWith(3, '10')  // size2_y
+      expect(spy).toHaveBeenCalledWith(4, '15')  // h
+      expect(spy).toHaveBeenCalledWith(5, '5')   // shift_x
+      expect(spy).toHaveBeenCalledWith(6, '3')   // shift_y
+      expect(spy).toHaveBeenCalledWith(7, '2')   // rounding
+      expect(spy).toHaveBeenCalledWith(8, '1')   // chamfer
+      expect(spy).toHaveBeenCalledTimes(9)
+    })
+
+    it('wedge – indices 0=x, 1=y, 2=z', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_wedge', { x: 10, y: 20, z: 30, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_wedge(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '20')
+      expect(spy).toHaveBeenCalledWith(2, '30')
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    it('pie_slice – indices 0=h, 1=r, 2=ang', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_pie_slice', { h: 10, r: 10, ang: 90, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_pie_slice(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '10')
+      expect(spy).toHaveBeenCalledWith(2, '90')
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    it('teardrop – indices 0=h, 1=r, 2=ang, 3=cap_h', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_teardrop', { h: 10, r: 5, ang: 60, cap_h: 3, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_teardrop(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '5')
+      expect(spy).toHaveBeenCalledWith(2, '60')
+      expect(spy).toHaveBeenCalledWith(3, '3')
+      expect(spy).toHaveBeenCalledTimes(4)
+    })
+
+    it('onion – indices 0=r, 1=ang, 2=cap_h', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_onion', { r: 10, ang: 60, cap_h: 3, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_onion(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '10')
+      expect(spy).toHaveBeenCalledWith(1, '60')
+      expect(spy).toHaveBeenCalledWith(2, '3')
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
+
+    it('rect_tube – indices 0=h, 1=size_x, 2=size_y, 3=isize_x, 4=isize_y, 5=wall, 6=rounding', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_rect_tube', { h: 20, size_x: 20, size_y: 20, isize_x: 16, isize_y: 16, wall: 2, rounding: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_rect_tube(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '20')  // h
+      expect(spy).toHaveBeenCalledWith(1, '20')  // size_x
+      expect(spy).toHaveBeenCalledWith(2, '20')  // size_y
+      expect(spy).toHaveBeenCalledWith(3, '16')  // isize_x
+      expect(spy).toHaveBeenCalledWith(4, '16')  // isize_y
+      expect(spy).toHaveBeenCalledWith(5, '2')   // wall
+      expect(spy).toHaveBeenCalledWith(6, '1')   // rounding
+      expect(spy).toHaveBeenCalledTimes(7)
+    })
+
+    it('octahedron – index 0=size', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_octahedron', { size: 20, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_octahedron(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '20')
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('regular_prism – indices 0=n, 1=h, 2=r, 3=rounding, 4=chamfer', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_regular_prism', { n: 6, h: 10, r: 5, rounding: 2, chamfer: 1, anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_regular_prism(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '6')
+      expect(spy).toHaveBeenCalledWith(1, '10')
+      expect(spy).toHaveBeenCalledWith(2, '5')
+      expect(spy).toHaveBeenCalledWith(3, '2')
+      expect(spy).toHaveBeenCalledWith(4, '1')
+      expect(spy).toHaveBeenCalledTimes(5)
+    })
+
+    it('text3d – indices 0=h, 1=size', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_text3d', { text: 'Hello', h: 2, size: 10, font: 'Liberation Sans', anchor: 'CENTER', spin: 0, orient: 'UP' })
+      shapes3dCodegen.bosl2_text3d(node, ctx)
+      expect(spy).toHaveBeenCalledWith(0, '2')
+      expect(spy).toHaveBeenCalledWith(1, '10')
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
+  })
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // Tier 2: 2D Shapes
   // ═══════════════════════════════════════════════════════════════════════════════
