@@ -2671,6 +2671,43 @@ describe("BOSL2 Codegen Handlers", () => {
       expect(result).not.toContain("spread");
       expect(result).not.toContain("cutpath");
     });
+
+    // ─── resolveValueInput index assertions for attachments ───────────────────
+
+    it('attach – resolveValueInput called with correct index (1=overlap)', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_attach', { parent: 'TOP', child: 'BOT', overlap: 0.5 })
+      attachmentsCodegen.bosl2_attach(node, ctx)
+      expect(spy).toHaveBeenCalledWith(1, '0.5')
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('half_of – resolveValueInput called with correct indices (1=vx, 2=vy, 3=vz, 4=cpx, 5=cpy, 6=cpz)', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_half_of', { vx: 0, vy: 0, vz: 1, cpx: 5, cpy: 3, cpz: 1 })
+      attachmentsCodegen.bosl2_half_of(node, ctx)
+      expect(spy).toHaveBeenCalledWith(1, '0')   // vx
+      expect(spy).toHaveBeenCalledWith(2, '0')   // vy
+      expect(spy).toHaveBeenCalledWith(3, '1')   // vz
+      expect(spy).toHaveBeenCalledWith(4, '5')   // cpx
+      expect(spy).toHaveBeenCalledWith(5, '3')   // cpy
+      expect(spy).toHaveBeenCalledWith(6, '1')   // cpz
+      expect(spy).toHaveBeenCalledTimes(6)
+    })
+
+    it('partition – resolveValueInput called with correct indices (1=x, 2=y, 3=z, 4=spread)', () => {
+      const spy = vi.fn((_index: number, fallback: string) => fallback)
+      const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy }
+      const node = mockNode('bosl2_partition', { x: 100, y: 100, z: 100, spread: 10, cutpath: 'jigsaw' })
+      attachmentsCodegen.bosl2_partition(node, ctx)
+      expect(spy).toHaveBeenCalledWith(1, '100')  // x
+      expect(spy).toHaveBeenCalledWith(2, '100')  // y
+      expect(spy).toHaveBeenCalledWith(3, '100')  // z
+      expect(spy).toHaveBeenCalledWith(4, '10')   // spread
+      expect(spy).toHaveBeenCalledTimes(4)
+    })
   });
 
   // ═══════════════════════════════════════════════════════════════════════════════
