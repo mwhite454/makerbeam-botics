@@ -7,9 +7,14 @@ export function PathSweepNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as Bosl2PathSweepData
   const update = useEditorStore((s) => s.updateNodeData)
   return (
-    <BaseNode id={id} category="bosl2_rounding" label="path_sweep" selected={selected}>
+    <BaseNode id={id} category="bosl2_rounding" label="path_sweep" selected={selected}
+      inputHandles={[
+        { id: 'in-0', label: 'child' },
+        { id: 'in-1', label: 'twist' },
+      ]}
+    >
       <SelectInput label="method" value={d.method} options={["incremental", "manual", "natural"]} onChange={(v) => update(id, { method: v })} />
-      <ExpressionInput label="twist" value={d.twist} step={1} onChange={(v) => update(id, { twist: v })} />
+      <ExpressionInput label="twist" value={d.twist} step={1} nodeId={id} handleId="in-1" onChange={(v) => update(id, { twist: v })} />
       <CheckboxInput label="closed" value={d.closed} onChange={(v) => update(id, { closed: v })} />
     </BaseNode>
   )
