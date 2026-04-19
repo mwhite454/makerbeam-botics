@@ -33,7 +33,7 @@ export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext
     const parent = String(d.parent ?? 'TOP')
     const child = String(d.child ?? 'BOT')
     let params = `${parent}, ${child}`
-    const ov = ctx.expr(d.overlap); if (ov !== '0') params += `, overlap = ${ov}`
+    const ov = ctx.resolveValueInput(1, ctx.expr(d.overlap)); if (ov !== '0') params += `, overlap = ${ov}`
     return ctx.emitTransform(`attach(${params})`)
   },
 
@@ -51,8 +51,8 @@ export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext
 
   bosl2_half_of: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const v = `[${ctx.expr(d.vx)}, ${ctx.expr(d.vy)}, ${ctx.expr(d.vz)}]`
-    const cp = `[${ctx.expr(d.cpx)}, ${ctx.expr(d.cpy)}, ${ctx.expr(d.cpz)}]`
+    const v = `[${ctx.resolveValueInput(1, ctx.expr(d.vx))}, ${ctx.resolveValueInput(2, ctx.expr(d.vy))}, ${ctx.resolveValueInput(3, ctx.expr(d.vz))}]`
+    const cp = `[${ctx.resolveValueInput(4, ctx.expr(d.cpx))}, ${ctx.resolveValueInput(5, ctx.expr(d.cpy))}, ${ctx.resolveValueInput(6, ctx.expr(d.cpz))}]`
     let params = `${v}`
     if (cp !== '[0, 0, 0]') params += `, cp = ${cp}`
     return ctx.emitTransform(`half_of(${params})`)
@@ -60,9 +60,9 @@ export const attachmentsCodegen: Record<string, (node: Node, ctx: CodegenContext
 
   bosl2_partition: (node, ctx) => {
     const d = node.data as Record<string, unknown>
-    const size = `[${ctx.expr(d.x)}, ${ctx.expr(d.y)}, ${ctx.expr(d.z)}]`
+    const size = `[${ctx.resolveValueInput(1, ctx.expr(d.x))}, ${ctx.resolveValueInput(2, ctx.expr(d.y))}, ${ctx.resolveValueInput(3, ctx.expr(d.z))}]`
     let params = `size = ${size}`
-    const sp = ctx.expr(d.spread); if (sp !== '0') params += `, spread = ${sp}`
+    const sp = ctx.resolveValueInput(4, ctx.expr(d.spread)); if (sp !== '0') params += `, spread = ${sp}`
     const cp = String(d.cutpath ?? ''); if (cp) params += `, cutpath = "${ctx.escapeString(cp)}"`
     return ctx.emitTransform(`partition(${params})`)
   },
