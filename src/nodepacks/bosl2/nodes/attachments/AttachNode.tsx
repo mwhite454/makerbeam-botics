@@ -9,7 +9,7 @@ export function AttachNode({ id, data, selected }: NodeProps) {
   return (
     <BaseNode id={id} category="bosl2_attachments" label="attach" selected={selected}
       inputHandles={[
-        { id: 'in-0', label: 'child' },
+        { id: 'in-0', label: 'geom' },
         { id: 'in-1', label: 'overlap' },
       ]}
     >
