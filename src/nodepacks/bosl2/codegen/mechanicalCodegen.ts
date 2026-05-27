@@ -1,6 +1,7 @@
 import type { Node } from "@xyflow/react";
 import type { CodegenContext } from "@/types/nodePack";
 import { optAnchor } from "./utils";
+import { SNAP_PIN_DEFAULT_SNAP, SNAP_PIN_DEFAULT_THICKNESS } from "../types/mechanical";
 
 // ─── Tier 5: Mechanical Parts codegen handlers ──────────────────────────────
 
@@ -133,6 +134,8 @@ export const mechanicalCodegen: Record<
     let params = `r = ${ctx.resolveValueInput(0, ctx.expr(d.r))}, l = ${ctx.resolveValueInput(1, ctx.expr(d.l))}`;
     const nd = ctx.resolveValueInput(2, ctx.expr(d.nub_depth));
     if (nd !== "0") params += `, nub_depth = ${nd}`;
+    params += `, snap = ${ctx.resolveValueInput(3, ctx.expr(d.snap ?? SNAP_PIN_DEFAULT_SNAP))}`;
+    params += `, thickness = ${ctx.resolveValueInput(4, ctx.expr(d.thickness ?? SNAP_PIN_DEFAULT_THICKNESS))}`;
     params += optAnchor(ctx, d);
     return `${ctx.pad}snap_pin(${params});\n`;
   },

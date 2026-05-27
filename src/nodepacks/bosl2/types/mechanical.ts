@@ -2,6 +2,10 @@ import type { Expr } from '@/types/nodes'
 
 // ─── Tier 5: Mechanical Parts ────────────────────────────────────────────────
 
+/** Safe defaults for snap_pin's required geometry params. */
+export const SNAP_PIN_DEFAULT_SNAP = 0.4;
+export const SNAP_PIN_DEFAULT_THICKNESS = 1;
+
 export interface Bosl2SpurGearData {
   mod: Expr; teeth: Expr; thickness: Expr
   pressure_angle: Expr; helical: Expr; shaft_diam: Expr
@@ -65,6 +69,7 @@ export interface Bosl2DovetailData {
 
 export interface Bosl2SnapPinData {
   r: Expr; l: Expr; nub_depth: Expr
+  snap: Expr; thickness: Expr
   anchor: string; spin: Expr; orient: string
 }
 

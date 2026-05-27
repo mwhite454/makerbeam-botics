@@ -1,4 +1,5 @@
 import type { PaletteItem } from '@/types/nodes'
+import { SNAP_PIN_DEFAULT_SNAP, SNAP_PIN_DEFAULT_THICKNESS } from '../types/mechanical';
 
 export const MECHANICAL_PALETTE: PaletteItem[] = [
   {
@@ -69,9 +70,9 @@ export const MECHANICAL_PALETTE: PaletteItem[] = [
   },
   {
     type: 'bosl2_snap_pin', label: 'snap_pin', category: 'bosl2_mechanical',
-    defaultData: { r: 1.5, l: 10, nub_depth: 0.4, anchor: 'CENTER', spin: 0, orient: 'UP' },
+    defaultData: { r: 1.5, l: 10, nub_depth: 0.4, snap: SNAP_PIN_DEFAULT_SNAP, thickness: SNAP_PIN_DEFAULT_THICKNESS, anchor: 'CENTER', spin: 0, orient: 'UP' },
     description: 'BOSL2 snap pin for snap-fit joints.',
-    inputs: 'r — pin radius; l — length; nub_depth',
+    inputs: 'r — pin radius; l — length; nub_depth; snap — nub snap distance; thickness — wall thickness',
   },
   {
     type: 'bosl2_knuckle_hinge', label: 'knuckle_hinge', category: 'bosl2_mechanical',

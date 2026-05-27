@@ -2175,12 +2175,28 @@ describe("BOSL2 Codegen Handlers", () => {
         r: 1.5,
         l: 10,
         nub_depth: 0.4,
+        snap: 0.4,
+        thickness: 1,
         anchor: "CENTER",
         spin: 0,
         orient: "UP",
       });
       const result = mechanicalCodegen.bosl2_snap_pin(node, mockCtx);
-      expect(result).toBe("  snap_pin(r = 1.5, l = 10, nub_depth = 0.4);\n");
+      expect(result).toBe("  snap_pin(r = 1.5, l = 10, nub_depth = 0.4, snap = 0.4, thickness = 1);\n");
+    });
+
+    it("snap_pin – legacy node (missing snap/thickness) falls back to safe defaults", () => {
+      const node = mockNode("bosl2_snap_pin", {
+        r: 1.5,
+        l: 10,
+        nub_depth: 0.4,
+        // snap and thickness intentionally absent (legacy save)
+        anchor: "CENTER",
+        spin: 0,
+        orient: "UP",
+      });
+      const result = mechanicalCodegen.bosl2_snap_pin(node, mockCtx);
+      expect(result).toBe("  snap_pin(r = 1.5, l = 10, nub_depth = 0.4, snap = 0.4, thickness = 1);\n");
     });
 
     it("knuckle_hinge – default", () => {
@@ -2470,13 +2486,15 @@ describe("BOSL2 Codegen Handlers", () => {
       expect(spy).toHaveBeenCalledTimes(4);
     });
 
-    it("snap_pin – indices 0=r, 1=l, 2=nub_depth", () => {
+    it("snap_pin – indices 0=r, 1=l, 2=nub_depth, 3=snap, 4=thickness", () => {
       const spy = vi.fn((_index: number, fallback: string) => fallback);
       const ctx: CodegenContext = { ...mockCtx, resolveValueInput: spy };
       const node = mockNode("bosl2_snap_pin", {
         r: 1.5,
         l: 10,
         nub_depth: 0.4,
+        snap: 0.4,
+        thickness: 1,
         anchor: "CENTER",
         spin: 0,
         orient: "UP",
@@ -2485,7 +2503,9 @@ describe("BOSL2 Codegen Handlers", () => {
       expect(spy).toHaveBeenCalledWith(0, "1.5");
       expect(spy).toHaveBeenCalledWith(1, "10");
       expect(spy).toHaveBeenCalledWith(2, "0.4");
-      expect(spy).toHaveBeenCalledTimes(3);
+      expect(spy).toHaveBeenCalledWith(3, "0.4");
+      expect(spy).toHaveBeenCalledWith(4, "1");
+      expect(spy).toHaveBeenCalledTimes(5);
     });
 
     it("knuckle_hinge – indices 0=length, 1=offset, 2=segs", () => {
