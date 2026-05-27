@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 import { AllNodeData } from "@/types/nodes";
 import type { AllSketchNodeData } from "@/types/sketchNodes";
+import { SNAP_PIN_DEFAULT_SNAP, SNAP_PIN_DEFAULT_THICKNESS } from "@/nodepacks/bosl2/types/mechanical";
 
 export type RenderStatus = "idle" | "rendering" | "done" | "error";
 export type PreviewMode = "off" | "stl" | "png";
@@ -895,7 +896,18 @@ export const useEditorStore = create<EditorState>()(
               state.edges = active.edges;
             }
 
-            // ── F-002: Backfill parentTabId/parentNodeId for legacy saves ──────
+            // ── F-003: Backfill snap/thickness for legacy bosl2_snap_pin saves ─
+            // Nodes saved before snap and thickness were added lack these fields,
+            // causing undef arithmetic in BOSL2 joiners.scad at render time.
+            for (const tab of state.tabs) {
+              for (const node of tab.nodes) {
+                if (node.type !== 'bosl2_snap_pin') continue;
+                const d = node.data as Partial<{ snap: unknown; thickness: unknown }>;
+                if (d.snap === undefined) d.snap = SNAP_PIN_DEFAULT_SNAP;
+                if (d.thickness === undefined) d.thickness = SNAP_PIN_DEFAULT_THICKNESS;
+              }
+            }
+
             // Scan all tabs for loop nodes that have bodyTabId references.
             // For any loop tab that lacks parentTabId, set it from the owning node.
             const loopNodeTypes = new Set([

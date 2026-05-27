@@ -16,6 +16,8 @@ export function SnapPinNode({ id, data, selected }: NodeProps) {
         { id: "in-0", label: "r" },
         { id: "in-1", label: "l" },
         { id: "in-2", label: "nub_depth" },
+        { id: "in-3", label: "snap" },
+        { id: "in-4", label: "thickness" },
       ]}
     >
       <ExpressionInput
@@ -41,6 +43,22 @@ export function SnapPinNode({ id, data, selected }: NodeProps) {
         nodeId={id}
         handleId="in-2"
         onChange={(v) => update(id, { nub_depth: v })}
+      />
+      <ExpressionInput
+        label="snap"
+        value={d.snap}
+        step={0.05}
+        nodeId={id}
+        handleId="in-3"
+        onChange={(v) => update(id, { snap: v })}
+      />
+      <ExpressionInput
+        label="thickness"
+        value={d.thickness}
+        step={0.1}
+        nodeId={id}
+        handleId="in-4"
+        onChange={(v) => update(id, { thickness: v })}
       />
     </BaseNode>
   );

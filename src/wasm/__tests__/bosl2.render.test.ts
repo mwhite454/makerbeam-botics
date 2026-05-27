@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest'
 import { renderScad } from './renderHarness'
 
-const BAD_PATTERNS = [/Can't open include file/i, /Ignoring unknown module/i, /Ignoring unknown function/i]
+const BAD_PATTERNS = [/Can't open include file/i, /Ignoring unknown module/i, /Ignoring unknown function/i, /ERROR: Assertion/i]
 
 function assertClean(result: { exit: number; stdout: string[]; stderr: string[]; output: Uint8Array }) {
   const err = result.stderr.join('\n')
@@ -58,6 +58,13 @@ describe('BOSL2 WASM render smoke tests', () => {
   it('renders joiners dovetail', async () => {
     const r = await renderScad(
       `include <BOSL2/std.scad>\ninclude <BOSL2/joiners.scad>\ndovetail("male", w = 10, h = 5, slide = 15);\n`
+    )
+    assertClean(r)
+  })
+
+  it('renders joiners snap_pin', async () => {
+    const r = await renderScad(
+      `include <BOSL2/std.scad>\ninclude <BOSL2/joiners.scad>\nsnap_pin(r = 1.5, l = 10, nub_depth = 0.4, snap = 0.4, thickness = 1);\n`
     )
     assertClean(r)
   })
